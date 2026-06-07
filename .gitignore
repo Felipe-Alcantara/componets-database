@@ -18,3 +18,7 @@ scraper/data/
 scraper/debug_html/
 scraper/.cache/
 *.db
+
+# Site — frontend (Node/Vite)
+site/frontend/node_modules/
+site/frontend/dist/
