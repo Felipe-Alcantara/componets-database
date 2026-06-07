@@ -1,0 +1,20 @@
+
+/felixo-standards
+
+# Segredos
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Dados coletados e banco
+scraper/data/
+scraper/debug_html/
+scraper/.cache/
+*.db
