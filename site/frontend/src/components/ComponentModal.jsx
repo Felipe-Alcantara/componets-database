@@ -10,12 +10,14 @@ import { fetchComponent } from "../api";
 export function ComponentModal({ component, onClose }) {
   const [detail, setDetail] = useState(null);
   const [tab, setTab] = useState("preview");
+  const [activeFile, setActiveFile] = useState(0);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
     setDetail(null);
     setError("");
+    setActiveFile(0);
     fetchComponent(component.external_id)
       .then(setDetail)
       .catch((e) => setError(e.message));
@@ -29,7 +31,6 @@ export function ComponentModal({ component, onClose }) {
   }, [onClose]);
 
   const files = detail?.files || [];
-  const mainFile = files[0];
   const hasCode = files.length > 0;
   // Tenta montar o preview (HTML direto ou React via Babel). kind: html|react|none
   const preview = detail ? buildPreview(detail, files) : { kind: "none" };
@@ -44,11 +45,19 @@ export function ComponentModal({ component, onClose }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detail]);
 
-  const copyCode = () => {
-    if (!mainFile?.content) return;
-    navigator.clipboard.writeText(mainFile.content);
+  const copyActive = () => {
+    const content = files[activeFile]?.content;
+    if (!content) return;
+    navigator.clipboard.writeText(content);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+  };
+
+  // Rótulo curto do arquivo: extensão ou nome do arquivo (sem o caminho longo)
+  const fileLabel = (f, i) => {
+    if (!f?.path) return `arquivo ${i + 1}`;
+    const base = f.path.split("/").pop();
+    return base || `arquivo ${i + 1}`;
   };
 
   return (
@@ -124,25 +133,39 @@ export function ComponentModal({ component, onClose }) {
             )}
 
             {detail && tab === "code" && hasCode && (
-              <div className="space-y-4">
-                {files.map((f, i) => (
-                  <div key={i}>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-xs text-zinc-400 font-mono">
-                        {f.path || `arquivo ${i + 1}`}
-                      </span>
-                      {i === 0 && (
-                        <Button variant="outline" size="sm" onClick={copyCode}>
-                          {copied ? <Check size={14} /> : <Copy size={14} />}
-                          {copied ? "Copiado" : "Copiar"}
-                        </Button>
-                      )}
+              <div>
+                <div className="flex items-center justify-between mb-2 gap-2">
+                  {/* Seletor de arquivo (só quando há mais de um) */}
+                  {files.length > 1 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {files.map((f, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setActiveFile(i)}
+                          className={cx(
+                            "px-2.5 py-1 text-xs rounded-md font-mono border transition",
+                            i === activeFile
+                              ? "bg-purple-500/20 text-purple-200 border-purple-500/40"
+                              : "bg-white/5 text-zinc-400 border-white/10 hover:text-zinc-200"
+                          )}
+                        >
+                          {fileLabel(f, i)}
+                        </button>
+                      ))}
                     </div>
-                    <pre className="code-block text-xs text-zinc-200 bg-zinc-900/80 border border-white/10 rounded-xl p-4 overflow-auto max-h-[360px]">
-                      {f.content}
-                    </pre>
-                  </div>
-                ))}
+                  ) : (
+                    <span className="text-xs text-zinc-400 font-mono truncate">
+                      {fileLabel(files[0], 0)}
+                    </span>
+                  )}
+                  <Button variant="outline" size="sm" onClick={copyActive}>
+                    {copied ? <Check size={14} /> : <Copy size={14} />}
+                    {copied ? "Copiado" : "Copiar"}
+                  </Button>
+                </div>
+                <pre className="code-block text-xs text-zinc-200 bg-zinc-900/80 border border-white/10 rounded-xl p-4 overflow-auto max-h-[400px]">
+                  {files[activeFile]?.content}
+                </pre>
               </div>
             )}
 

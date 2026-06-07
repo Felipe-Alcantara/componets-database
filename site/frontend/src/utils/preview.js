@@ -29,6 +29,29 @@ export function isReactFramework(framework = "") {
 
 const DAISYUI_CDN = "https://cdn.jsdelivr.net/npm/daisyui@4/dist/full.min.css";
 
+/**
+ * Script de auto-ajuste: mede o conteúdo e, se for maior que a viewport do iframe,
+ * aplica um scale para caber inteiro (sem cortar nem vazar). Centraliza o resultado.
+ */
+const FIT_SCRIPT = `
+  <script>
+    (function () {
+      function fit() {
+        var box = document.getElementById("fit");
+        if (!box) return;
+        box.style.transform = "none";
+        var cw = window.innerWidth, ch = window.innerHeight;
+        var w = box.scrollWidth, h = box.scrollHeight;
+        var s = Math.min(cw / w, ch / h, 1);
+        if (s < 1) box.style.transform = "scale(" + s + ")";
+      }
+      window.addEventListener("load", fit);
+      window.addEventListener("resize", fit);
+      setTimeout(fit, 300); setTimeout(fit, 1000);
+    })();
+  </script>
+`;
+
 /** Documento para componentes HTML/CSS (markup + <style> embutido). */
 function buildHtmlDoc(html, withDaisyUI = false) {
   // DaisyUI precisa do seu próprio CSS além do Tailwind para as classes (btn, alert…).
@@ -40,11 +63,13 @@ function buildHtmlDoc(html, withDaisyUI = false) {
     ${daisy}
     <script src="${TAILWIND_CDN}"></script>
     <style>
-      body { margin:0; min-height:100vh; display:flex; align-items:center;
-             justify-content:center; padding:32px; background:#18181b; }
+      html, body { margin:0; width:100%; height:100%; overflow:hidden; background:#18181b; }
+      body { display:flex; align-items:center; justify-content:center; padding:16px;
+             box-sizing:border-box; }
+      #fit { transform-origin:center center; max-width:100%; }
     </style>
   </head>
-  <body>${html}</body>
+  <body><div id="fit">${html}</div>${FIT_SCRIPT}</body>
 </html>`;
 }
 
@@ -90,6 +115,26 @@ function stripImportsExports(code) {
 }
 
 /**
+ * Extrai os nomes importados de lucide-react e os liga ao ícone genérico (_Icon),
+ * já que removemos os imports. Sem isso, `<ArrowRight />` ficaria indefinido.
+ */
+function iconBindings(...codes) {
+  const names = new Set();
+  for (const code of codes) {
+    const re = /import\s*\{([^}]+)\}\s*from\s*["']lucide-react["']/g;
+    let m;
+    while ((m = re.exec(code || ""))) {
+      m[1].split(",").forEach((n) => {
+        const clean = n.trim().split(/\s+as\s+/).pop().trim();
+        if (/^[A-Za-z_$][\w$]*$/.test(clean)) names.add(clean);
+      });
+    }
+  }
+  if (!names.size) return "";
+  return "const " + [...names].map((n) => `${n} = _Icon`).join(", ") + ";";
+}
+
+/**
  * Stubs dos imports comuns para o código rodar sem resolver módulos:
  * - cn/clsx/twMerge: junta classes
  * - cva: variantes (no-op)
@@ -118,22 +163,34 @@ function reactRuntime() {
     const useSpring = FM.useSpring || ((v) => v);
     const useInView = FM.useInView || (() => true);
     // Primitivos genéricos (shadcn-like) para os demos
-    const _box = (cls) => ({ className = "", children, ...p }) =>
-      React.createElement("div", { className: cn(cls, className), ...p }, children);
+    const _box = (cls, tag) => ({ className = "", children, ...p }) =>
+      React.createElement(tag || "div", { className: cn(cls, className), ...p }, children);
     const Card = _box("rounded-xl border border-white/10 bg-zinc-900 text-zinc-100");
     const CardHeader = _box("p-4");
     const CardContent = _box("p-4");
     const CardFooter = _box("p-4");
-    const CardTitle = ({ children, className = "" }) =>
-      React.createElement("h3", { className: cn("font-semibold", className) }, children);
-    const CardDescription = ({ children, className = "" }) =>
-      React.createElement("p", { className: cn("text-sm text-zinc-400", className) }, children);
+    const CardTitle = _box("font-semibold", "h3");
+    const CardDescription = _box("text-sm text-zinc-400", "p");
     const Button = ({ className = "", children, ...p }) =>
-      React.createElement("button", { className: cn("inline-flex items-center justify-center rounded-md bg-purple-600 px-4 py-2 text-sm text-white", className), ...p }, children);
+      React.createElement("button", { className: cn("inline-flex items-center justify-center gap-2 rounded-md bg-purple-600 px-4 py-2 text-sm text-white", className), ...p }, children);
     const Input = ({ className = "", ...p }) =>
       React.createElement("input", { className: cn("w-full rounded-md border border-white/10 bg-zinc-800 px-3 py-2 text-sm", className), ...p });
-    const Label = ({ className = "", children, ...p }) =>
-      React.createElement("label", { className: cn("text-sm text-zinc-300", className), ...p }, children);
+    const Label = _box("text-sm text-zinc-300", "label");
+    const Badge = _box("inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-xs");
+    const Separator = _box("my-2 h-px w-full bg-white/10");
+    const ScrollArea = _box("overflow-auto");
+    const Tooltip = _box(""), TooltipTrigger = _box(""), TooltipContent = _box(""),
+          TooltipProvider = ({ children }) => children;
+    const Avatar = _box("inline-flex h-10 w-10 overflow-hidden rounded-full bg-zinc-700");
+    const AvatarImage = ({ className = "", ...p }) =>
+      React.createElement("img", { className: cn("h-full w-full object-cover", className), ...p });
+    const AvatarFallback = _box("flex h-full w-full items-center justify-center text-xs");
+    // Ícones (lucide-react): qualquer ícone vira um quadradinho SVG genérico
+    const _Icon = ({ size = 20, className = "" }) =>
+      React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24",
+        fill: "none", stroke: "currentColor", strokeWidth: 2, className },
+        React.createElement("rect", { x: 4, y: 4, width: 16, height: 16, rx: 3 }));
+    const Icons = new Proxy({}, { get: () => _Icon });
   `;
 }
 
@@ -179,12 +236,14 @@ function reactHtml(body) {
     <script src="${MOTION_CDN}"></script>
     <script src="${BABEL_CDN}"></script>
     <style>
-      body { margin:0; min-height:100vh; display:flex; align-items:center;
-             justify-content:center; padding:32px; background:#18181b; }
+      html, body { margin:0; width:100%; height:100%; overflow:hidden; background:#18181b; }
+      body { display:flex; align-items:center; justify-content:center; padding:16px;
+             box-sizing:border-box; }
+      #fit { transform-origin:center center; max-width:100%; }
     </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="fit"><div id="root"></div></div>
     <script>
       (function () {
         var source = ${payload};
@@ -203,6 +262,7 @@ function reactHtml(body) {
         }
       })();
     </script>
+    ${FIT_SCRIPT}
   </body>
 </html>`;
 }
@@ -212,17 +272,19 @@ function reactHtml(body) {
  * Concatena o código do componente + o demo (que o instancia) e renderiza o demo.
  */
 function buildReactDocWithDemo(componentCode, demoCode) {
+  const icons = iconBindings(componentCode, demoCode);
   const comp = stripImportsExports(componentCode);
   const demoName = /export\s+default\s+function\s+([A-Za-z0-9_]+)/.exec(demoCode);
   const demo = stripImportsExports(demoCode);
   const target = demoName ? demoName[1] : "__default__";
-  return reactHtml(`${reactRuntime()}\n${comp}\n${demo}\n${renderSnippet(target, false)}`);
+  return reactHtml(`${reactRuntime()}\n${icons}\n${comp}\n${demo}\n${renderSnippet(target, false)}`);
 }
 
 /** Documento para componentes React sem demo (auto-render do export). */
 function buildReactDoc(code) {
+  const icons = iconBindings(code);
   const { src, target } = prepareReactSource(code);
-  return reactHtml(`${reactRuntime()}\n${src}\n${renderSnippet(target, true)}`);
+  return reactHtml(`${reactRuntime()}\n${icons}\n${src}\n${renderSnippet(target, true)}`);
 }
 
 /**
@@ -231,15 +293,19 @@ function buildReactDoc(code) {
  */
 export function buildPreview(component, files = []) {
   const list = Array.isArray(files) ? files : [];
-  // Para HTML, prioriza o arquivo .html; para React, o primeiro arquivo de código.
-  const htmlFile = list.find((f) => (f.path || "").endsWith(".html") || f.type === "html");
+  // Arquivo de marcação para preview: .html explícito, NUNCA .css (que renderiza
+  // como texto cru). Se a fonte tem só CSS, não há preview.
+  const htmlFile = list.find((f) => {
+    const path = (f.path || "").toLowerCase();
+    if (path.endsWith(".css") || f.type === "css") return false;
+    return path.endsWith(".html") || f.type === "html" || /<[a-z][\s\S]*>/i.test(f.content || "");
+  });
   const codeFile = list[0];
 
   if (isHtmlFramework(component.framework)) {
-    const html = htmlFile?.content || codeFile?.content;
-    if (!html) return { kind: "none", doc: "" };
+    if (!htmlFile?.content) return { kind: "none", doc: "" };
     const isDaisy = component.source_slug === "daisyui";
-    return { kind: "html", doc: buildHtmlDoc(html, isDaisy) };
+    return { kind: "html", doc: buildHtmlDoc(htmlFile.content, isDaisy) };
   }
   if (isReactFramework(component.framework)) {
     const code = codeFile?.content;
