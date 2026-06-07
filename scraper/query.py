@@ -12,6 +12,7 @@ Uso:
     python query.py --show uiverse_buttons_xxx       # mostra um componente
 """
 import argparse
+import json
 import sqlite3
 import sys
 from pathlib import Path
@@ -54,18 +55,27 @@ def cmd_categories(conn: sqlite3.Connection) -> None:
         print(f"{r['canonical_category']:<18} {r['n']:>7}")
 
 
-def cmd_category(conn: sqlite3.Connection, category: str, limit: int) -> None:
-    rows = conn.execute(
-        "SELECT external_id, name, title, source_slug FROM components "
-        "WHERE canonical_category = ? ORDER BY source_slug, name LIMIT ?",
-        (category, limit),
-    ).fetchall()
-    print(f"\n{len(rows)} componente(s) na categoria '{category}':\n")
+def cmd_category(conn: sqlite3.Connection, category: str, limit: int, include_demos: bool) -> None:
+    # Busca na categoria primária OU nas tags (multi-uso). A tag é guardada como
+    # JSON; "%\"button\"%" casa o valor exato dentro do array.
+    sql = (
+        "SELECT external_id, name, title, source_slug, canonical_category FROM components "
+        "WHERE (canonical_category = ? OR category_tags LIKE ?)"
+    )
+    params = [category, f'%"{category}"%']
+    if not include_demos:
+        sql += " AND (is_demo = 0 OR is_demo IS NULL)"
+    sql += " ORDER BY source_slug, name LIMIT ?"
+    params.append(limit)
+
+    rows = conn.execute(sql, params).fetchall()
+    print(f"\n{len(rows)} componente(s) na categoria/tag '{category}':\n")
     for r in rows:
-        print(f"  [{r['source_slug']:<10}] {r['title'] or r['name']}  id={r['external_id']}")
+        primaria = "" if r["canonical_category"] == category else f" (primária: {r['canonical_category']})"
+        print(f"  [{r['source_slug']:<10}] {r['title'] or r['name']}{primaria}  id={r['external_id']}")
 
 
-def cmd_search(conn: sqlite3.Connection, term: str, framework: str, limit: int) -> None:
+def cmd_search(conn: sqlite3.Connection, term: str, framework: str, limit: int, include_demos: bool) -> None:
     sql = (
         "SELECT external_id, name, title, source_slug, framework, category, license "
         "FROM components WHERE (name LIKE ? OR title LIKE ?)"
@@ -74,6 +84,8 @@ def cmd_search(conn: sqlite3.Connection, term: str, framework: str, limit: int) 
     if framework:
         sql += " AND framework LIKE ?"
         params.append(f"%{framework}%")
+    if not include_demos:
+        sql += " AND (is_demo = 0 OR is_demo IS NULL)"
     sql += " ORDER BY source_slug, name LIMIT ?"
     params.append(limit)
 
@@ -110,6 +122,13 @@ def cmd_show(conn: sqlite3.Connection, external_id: str) -> None:
     print(f"Origem:     {r['source_url']}")
     print(f"Público:    {r['public_url']}")
     print(f"Captura:    {r['capture_source']}")
+    # category_tags pode não existir em bancos antigos não migrados
+    try:
+        tags = r["category_tags"]
+        if tags:
+            print(f"Tags:       {', '.join(json.loads(tags))}")
+    except (IndexError, KeyError):
+        pass
     files = r["files"]
     if files and files != "[]":
         print(f"\nArquivos de código: presentes ({len(files)} bytes de JSON)")
@@ -127,6 +146,8 @@ def main() -> None:
     parser.add_argument("--source", type=str, help="lista componentes de uma fonte")
     parser.add_argument("--show", type=str, help="mostra um componente por external_id")
     parser.add_argument("--limit", type=int, default=20, help="máximo de resultados")
+    parser.add_argument("--include-demos", action="store_true",
+                        help="inclui variações -demo (escondidas por padrão)")
     args = parser.parse_args()
 
     conn = connect()
@@ -136,9 +157,9 @@ def main() -> None:
         elif args.categories:
             cmd_categories(conn)
         elif args.category:
-            cmd_category(conn, args.category, args.limit)
+            cmd_category(conn, args.category, args.limit, args.include_demos)
         elif args.search:
-            cmd_search(conn, args.search, args.framework, args.limit)
+            cmd_search(conn, args.search, args.framework, args.limit, args.include_demos)
         elif args.source:
             cmd_source(conn, args.source, args.limit)
         elif args.show:
