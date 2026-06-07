@@ -59,11 +59,11 @@ export function LivePreview({ externalId, className = "" }) {
           sandbox="allow-scripts"
           srcDoc={doc}
           loading="lazy"
-          className="w-full h-full border-0 bg-zinc-900"
+          className="w-full h-full border-0 bg-zinc-100"
           scrolling="no"
         />
       ) : (
-        <div className="w-full h-full flex items-center justify-center text-[11px] text-zinc-600">
+        <div className="w-full h-full flex items-center justify-center text-[11px] text-zinc-400 bg-zinc-100">
           {state === "loading" ? "carregando…" : state === "empty" ? "sem preview" : ""}
         </div>
       )}

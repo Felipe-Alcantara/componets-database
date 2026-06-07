@@ -30,24 +30,51 @@ export function isReactFramework(framework = "") {
 const DAISYUI_CDN = "https://cdn.jsdelivr.net/npm/daisyui@4/dist/full.min.css";
 
 /**
- * Script de auto-ajuste: mede o conteúdo e, se for maior que a viewport do iframe,
- * aplica um scale para caber inteiro (sem cortar nem vazar). Centraliza o resultado.
+ * Auto-ajuste robusto: mede a "caixa" real do conteúdo (bounding box de todos os
+ * filhos, cobrindo elementos posicionados/absolutos que estouram) e aplica um
+ * scale para o componente caber inteiro e centralizado no iframe.
  */
 const FIT_SCRIPT = `
   <script>
     (function () {
+      function contentBox(box) {
+        // Mede TODOS os descendentes (não só filhos diretos) para capturar
+        // pseudo-conteúdo posicionado/absoluto que estoura a caixa do pai.
+        var r0 = box.getBoundingClientRect();
+        var minL = 0, minT = 0, maxR = box.scrollWidth, maxB = box.scrollHeight;
+        var all = box.querySelectorAll("*");
+        for (var i = 0; i < all.length; i++) {
+          var el = all[i], r = el.getBoundingClientRect();
+          if (!r.width && !r.height) continue;
+          minL = Math.min(minL, r.left - r0.left);
+          minT = Math.min(minT, r.top - r0.top);
+          // inclui o scrollWidth/Height do elemento (conteúdo que transborda a
+          // própria caixa, como texto maior que um botão de largura fixa)
+          maxR = Math.max(maxR, r.left - r0.left + el.scrollWidth, r.right - r0.left);
+          maxB = Math.max(maxB, r.top - r0.top + el.scrollHeight, r.bottom - r0.top);
+        }
+        return { w: maxR - Math.min(0, minL), h: maxB - Math.min(0, minT) };
+      }
       function fit() {
         var box = document.getElementById("fit");
         if (!box) return;
         box.style.transform = "none";
-        var cw = window.innerWidth, ch = window.innerHeight;
-        var w = box.scrollWidth, h = box.scrollHeight;
-        var s = Math.min(cw / w, ch / h, 1);
-        if (s < 1) box.style.transform = "scale(" + s + ")";
+        // espaço interno disponível (body já tem padding); folga extra p/ animações
+        var cw = document.body.clientWidth - 16, ch = document.body.clientHeight - 16;
+        var c = contentBox(box);
+        if (!c.w || !c.h) return;
+        // fator de segurança: deixa respiro p/ animações/pseudo-elementos que
+        // expandem além da medição estática. Nunca amplia além de 1x.
+        var s = Math.min(cw / c.w, ch / c.h, 1) * 0.9;
+        box.style.transform = "scale(" + s + ")";
       }
       window.addEventListener("load", fit);
       window.addEventListener("resize", fit);
-      setTimeout(fit, 300); setTimeout(fit, 1000);
+      // imagens podem mudar o tamanho ao carregar
+      Array.prototype.forEach.call(document.images, function (im) {
+        im.addEventListener("load", fit);
+      });
+      setTimeout(fit, 150); setTimeout(fit, 600); setTimeout(fit, 1500);
     })();
   </script>
 `;
@@ -57,16 +84,19 @@ function buildHtmlDoc(html, withDaisyUI = false) {
   // DaisyUI precisa do seu próprio CSS além do Tailwind para as classes (btn, alert…).
   const daisy = withDaisyUI ? `<link rel="stylesheet" href="${DAISYUI_CDN}" />` : "";
   return `<!doctype html>
-<html class="dark" data-theme="dark">
+<html>
   <head>
     <meta charset="utf-8" />
     ${daisy}
     <script src="${TAILWIND_CDN}"></script>
     <style>
-      html, body { margin:0; width:100%; height:100%; overflow:hidden; background:#18181b; }
-      body { display:flex; align-items:center; justify-content:center; padding:16px;
-             box-sizing:border-box; }
-      #fit { transform-origin:center center; max-width:100%; }
+      html, body { margin:0; width:100%; height:100%; overflow:hidden;
+        background:#f4f4f5; }
+      body { display:flex; align-items:center; justify-content:center; box-sizing:border-box;
+        padding:20px; }
+      #fit { transform-origin:center center; display:inline-block; }
+      /* neutraliza margin:auto do elemento raiz, que desloca a medição */
+      #fit > * { margin-left:0 !important; margin-right:0 !important; }
     </style>
   </head>
   <body><div id="fit">${html}</div>${FIT_SCRIPT}</body>
@@ -152,7 +182,7 @@ function reactRuntime() {
     const cn = (...a) => a.flat(Infinity).filter(Boolean).join(" ");
     const clsx = cn, twMerge = cn;
     const cva = () => () => "";
-    const useTheme = () => ({ theme: "dark", setTheme: () => {} });
+    const useTheme = () => ({ theme: "light", setTheme: () => {} });
     const FM = window.FramerMotion || {};
     const motion = FM.motion || new Proxy({}, { get: (_, tag) => (p) => React.createElement(tag, p, p.children) });
     const AnimatePresence = FM.AnimatePresence || (({ children }) => children);
@@ -207,7 +237,7 @@ function renderSnippet(target, withChildren) {
           .render(React.createElement(Comp, {}${childrenArg}));
       } catch (err) {
         document.getElementById("root").innerHTML =
-          '<div style="color:#a1a1aa;font-family:sans-serif;text-align:center;max-width:340px">' +
+          '<div style="color:#52525b;font-family:sans-serif;text-align:center;max-width:340px">' +
           '<p style="font-size:14px">Não foi possível renderizar este componente React automaticamente.</p>' +
           '<p style="font-size:12px;color:#71717a">Veja a aba <b>Código</b> para o código-fonte completo.</p>' +
           '</div>';
@@ -236,10 +266,9 @@ function reactHtml(body) {
     <script src="${MOTION_CDN}"></script>
     <script src="${BABEL_CDN}"></script>
     <style>
-      html, body { margin:0; width:100%; height:100%; overflow:hidden; background:#18181b; }
-      body { display:flex; align-items:center; justify-content:center; padding:16px;
-             box-sizing:border-box; }
-      #fit { transform-origin:center center; max-width:100%; }
+      html, body { margin:0; width:100%; height:100%; overflow:hidden; background:#f4f4f5; }
+      body { display:flex; align-items:center; justify-content:center; box-sizing:border-box; }
+      #fit { transform-origin:center center; display:inline-block; }
     </style>
   </head>
   <body>
@@ -255,7 +284,7 @@ function reactHtml(body) {
           (0, eval)(out);
         } catch (err) {
           document.getElementById("root").innerHTML =
-            '<div style="color:#a1a1aa;font-family:sans-serif;text-align:center;max-width:340px">' +
+            '<div style="color:#52525b;font-family:sans-serif;text-align:center;max-width:340px">' +
             '<p style="font-size:14px">N\\u00e3o foi poss\\u00edvel renderizar este componente React automaticamente.</p>' +
             '<p style="font-size:12px;color:#71717a">Veja a aba <b>C\\u00f3digo</b> para o c\\u00f3digo-fonte completo.</p>' +
             '</div>';
