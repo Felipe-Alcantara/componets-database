@@ -1,11 +1,13 @@
 import { motion } from "framer-motion";
-import { Card, CardContent, CardFooter } from "./ui/Card";
+import { Card } from "./ui/Card";
 import { Badge } from "./ui/Badge";
+import { LivePreview } from "./LivePreview";
 import { cx, frameworkColor } from "../utils/cx";
 
-/** Card de um componente no grid. Clica para abrir o detalhe. */
+/** Card de um componente no grid, com mini-preview ao vivo. */
 export function ComponentCard({ component, onOpen }) {
-  const { name, title, source_name, framework, canonical_category, tags } = component;
+  const { external_id, name, title, source_name, framework, canonical_category, tags } =
+    component;
 
   return (
     <motion.button
@@ -16,10 +18,16 @@ export function ComponentCard({ component, onOpen }) {
       onClick={() => onOpen(component)}
       className="text-left"
     >
-      <Card glow className="h-full cursor-pointer hover:border-white/20">
-        <CardContent>
+      <Card glow className="h-full cursor-pointer hover:border-white/20 overflow-hidden">
+        {/* Mini-preview ao vivo */}
+        <div className="h-40 border-b border-white/10 bg-zinc-900/60">
+          <LivePreview externalId={external_id} className="w-full h-full" />
+        </div>
+
+        {/* Info */}
+        <div className="p-4">
           <div className="flex items-start justify-between gap-2">
-            <h3 className="text-base font-semibold text-zinc-50 truncate">
+            <h3 className="text-sm font-semibold text-zinc-50 truncate">
               {title || name}
             </h3>
             <span
@@ -31,20 +39,16 @@ export function ComponentCard({ component, onOpen }) {
               {framework}
             </span>
           </div>
-          <p className="mt-1 text-xs text-zinc-400">{source_name}</p>
+          <p className="mt-0.5 text-xs text-zinc-400">{source_name}</p>
 
-          <div className="mt-3 flex flex-wrap gap-1.5">
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
             {(tags || []).slice(0, 4).map((t) => (
               <Badge key={t} active={t === canonical_category}>
                 {t}
               </Badge>
             ))}
           </div>
-        </CardContent>
-        <CardFooter className="justify-between">
-          <span className="text-[11px] text-zinc-500">Ver detalhes & código</span>
-          <span className="text-purple-400 text-sm">→</span>
-        </CardFooter>
+        </div>
       </Card>
     </motion.button>
   );
