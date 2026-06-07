@@ -111,7 +111,8 @@ def main() -> int:
 
     if not DB_PATH.exists():
         log(f"Banco não encontrado em {DB_PATH}.")
-        log("Rode a coleta antes: na pasta scraper/, 'python main.py --all-sources --commit'.")
+        log("Normalmente o banco já vem no repositório. Se foi removido, gere-o com:")
+        log("  na raiz do projeto, 'python start_app.py --commit'.")
         return 1
 
     # Reinício / portas ocupadas

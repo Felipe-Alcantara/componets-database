@@ -27,6 +27,7 @@ Um agregador que cataloga componentes de UI de bibliotecas open source da comuni
 - [🚀 Como Usar](#-como-usar)
 - [🔧 Funcionalidades Técnicas](#-funcionalidades-técnicas)
 - [⚠️ Limitações](#️-limitações)
+- [📐 Padrões de Qualidade (felixo-standards)](#-padrões-de-qualidade-felixo-standards)
 - [🛡️ Licenças & Ética de Coleta](#️-licenças--ética-de-coleta)
 - [🚀 Próximos passos abertos à comunidade](#-próximos-passos-abertos-à-comunidade)
 - [📝 Licença](#-licença)
@@ -143,49 +144,69 @@ padrão; use `--include-demos` para vê-las.
 
 ## 🚀 Como Usar
 
-### Opção 1: Forma mais fácil (Recomendado!) 🚀
+> **Pré-requisitos**: Python 3.11+ e Node.js 18+. O banco com **os ~4.900 componentes
+> já vem no clone** (`scraper/data/components.db`) — não precisa coletar para ver o site.
 
-Um único comando instala as dependências e coleta tudo:
+### 1. Clonar o repositório
 
 ```bash
+git clone https://github.com/Felipe-Alcantara/componets-database.git
+cd componets-database
+```
+
+### 2. Subir o site (biblioteca visual)
+
+Um único comando instala as dependências (backend Flask + frontend Vite), sobe os dois
+e abre o navegador na galeria — com mini-preview ao vivo, busca, filtros e código:
+
+**Linux / macOS / Git Bash:**
+```bash
+cd site
+python3 start_app.py
+```
+
+**PowerShell / CMD (Windows):**
+```powershell
+cd site
 python start_app.py
 ```
 
-### Opção 2: Para desenvolvedores
+Abre em `http://127.0.0.1:5173`. Detalhes em [`site/README.md`](site/README.md).
 
-#### Instalação
+---
 
+### 🔄 (Opcional) Atualizar o banco
+
+O banco versionado é um retrato da coleta. Para atualizá-lo com os componentes mais
+recentes das fontes, rode a coleta a partir da raiz:
+
+**Linux / macOS / Git Bash:**
 ```bash
-# Clone o repositório
-git clone https://github.com/Felipe-Alcantara/componets-database.git
-cd componets-database/scraper
-
-# Instale as dependências
-pip install -r requirements.txt
+python3 start_app.py --commit
 ```
 
-#### (Opcional) Token do GitHub
-
-As fontes via API/clone funcionam sem token, mas um token sobe o limite do GitHub de 60 → 5000 requisições/hora:
-
-```bash
-cp .env.example .env
-# edite o .env e cole seu token (https://github.com/settings/tokens)
+**PowerShell / CMD (Windows):**
+```powershell
+python start_app.py --commit
 ```
 
-#### Executando
+As fontes funcionam **sem token**, mas um token do GitHub sobe o limite de 60 → 5000
+requisições/hora:
 
 ```bash
-# Listar fontes disponíveis
-python main.py --list-sources
+cp scraper/.env.example scraper/.env
+# edite scraper/.env e cole seu token: https://github.com/settings/tokens
+```
 
-# Coletar de uma fonte (preview, não grava no banco)
-python main.py --source magicui --limit 50
+### 🧰 Comandos avulsos (scraper)
 
-# Coletar tudo e gravar no banco SQLite
-python main.py --all-sources --commit --no-interactive
+Na pasta `scraper/`:
 
-# Consultar o banco
+```bash
+python main.py --list-sources                       # lista as fontes
+python main.py --source magicui --limit 50          # prévia de uma fonte
+python main.py --all-sources --commit --no-interactive  # coleta tudo no banco
+
 python query.py --stats                 # totais por fonte
 python query.py --categories            # totais por categoria primária
 python query.py --tags                  # totais por faceta (tag)
@@ -194,18 +215,16 @@ python query.py --category animation    # busca multi-uso (qualquer tipo animado
 python query.py --show magicui_shimmer-button
 ```
 
-### Opção 3: Navegar pela biblioteca visual (site) 🖥️
+### ⚡ Escolha rápida por cenário
 
-Depois de coletar, suba o site para explorar os componentes numa galeria com mini-preview
-ao vivo em cada card, busca (inclusive no código), filtros, ordenação aleatória, fundo
-selecionável e código — na pasta `site/`:
-
-```bash
-python start_app.py
-```
-
-Sobe a API (Flask) e o frontend (React/Vite) e abre o navegador. Detalhes em
-[`site/README.md`](site/README.md).
+| Cenário | O que rodar |
+|---------|-------------|
+| Quero ver o site (banco já vem no clone) | `cd site && python start_app.py` |
+| Re-rodar o site sem reinstalar deps | `cd site && python start_app.py --no-install` |
+| Reiniciar o site nas portas | `cd site && python start_app.py restart` |
+| Atualizar o banco com a coleta mais nova | `python start_app.py --commit` (na raiz) |
+| Testar uma fonte só | `cd scraper && python main.py --source magicui --limit 20` |
+| Consultar o banco no terminal | `cd scraper && python query.py --stats` |
 
 ---
 
@@ -234,6 +253,67 @@ Cada fonte implementa a interface `SourceAdapter` (`src/adapters/base.py`), com 
 - **Float UI**: por restrição de licença, apenas metadados (nome, categoria, link) são salvos — **sem código**.
 - **Rate limit**: as fontes via API/clone pontual usam o GitHub; sem token, o limite é 60 req/hora.
 - **Cobertura**: a lista de componentes de algumas fontes (ex.: Aceternity, 21st) é mantida manualmente nos adapters e pode ficar atrás de novos lançamentos.
+
+---
+
+## 📐 Padrões de Qualidade (felixo-standards)
+
+Este projeto segue o **[Felixo System Design](https://github.com/Felipe-Alcantara/Felixo-System-Design)**.
+A pasta `felixo-standards/` (ignorada pelo git) é sincronizada localmente. Para puxar a
+versão mais recente, use o método mais adequado:
+
+### 1. Sincronizar sem `.git` (recomendado)
+
+**Linux / macOS / Git Bash:**
+```bash
+tmp_dir="$(mktemp -d)" && git clone --depth 1 https://github.com/Felipe-Alcantara/Felixo-System-Design.git "$tmp_dir/repo" && rm -rf "$tmp_dir/repo/.git" && mkdir -p ./felixo-standards && rsync -a --delete "$tmp_dir/repo/" ./felixo-standards/ && rm -rf "$tmp_dir"
+```
+
+**PowerShell (Windows):**
+```powershell
+$tmpDir = Join-Path $env:TEMP ("felixo-standards-" + [guid]::NewGuid())
+git clone --depth 1 https://github.com/Felipe-Alcantara/Felixo-System-Design.git $tmpDir
+Remove-Item -Recurse -Force (Join-Path $tmpDir ".git")
+New-Item -ItemType Directory -Force -Path "./felixo-standards" | Out-Null
+robocopy $tmpDir "./felixo-standards" /MIR | Out-Null
+Remove-Item -Recurse -Force $tmpDir
+```
+
+#### Atalho global `felixo` (Bash/Zsh)
+
+```bash
+felixo() {
+  local dest="./felixo-standards"
+  local repo_url="https://github.com/Felipe-Alcantara/Felixo-System-Design.git"
+  local tmp_dir
+  tmp_dir="$(mktemp -d)" || return 1
+  git clone --depth 1 "$repo_url" "$tmp_dir/repo" || { rm -rf "$tmp_dir"; return 1; }
+  rm -rf "$tmp_dir/repo/.git"
+  mkdir -p "$dest"
+  rsync -a --delete "$tmp_dir/repo/" "$dest/"
+  rm -rf "$tmp_dir"
+}
+```
+
+### 2. Baixar como ZIP
+
+**Linux / macOS:**
+```bash
+curl -L https://github.com/Felipe-Alcantara/Felixo-System-Design/archive/refs/heads/main.zip -o felixo.zip
+unzip felixo.zip && mv Felixo-System-Design-main felixo-standards && rm felixo.zip
+```
+
+### 3. Baixar com `npx degit`
+
+```bash
+npx degit Felipe-Alcantara/Felixo-System-Design ./felixo-standards
+```
+
+| Cenário | Melhor opção |
+|---------|--------------|
+| Quero atualizar quando quiser | sincronização sem `.git` / atalho `felixo` |
+| Quero da forma mais simples | ZIP |
+| Quero sem `.git` via terminal | `npx degit` |
 
 ---
 

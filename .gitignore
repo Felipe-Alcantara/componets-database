@@ -13,11 +13,12 @@ __pycache__/
 .venv/
 venv/
 
-# Dados coletados e banco
-scraper/data/
+# Dados coletados — ignora tudo em data/ EXCETO o banco, que é versionado
+# para o site rodar direto após o clone (são componentes públicos, sem segredos).
+scraper/data/*
+!scraper/data/components.db
 scraper/debug_html/
 scraper/.cache/
-*.db
 
 # Site — frontend (Node/Vite)
 site/frontend/node_modules/
