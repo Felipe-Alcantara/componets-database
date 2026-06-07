@@ -77,7 +77,6 @@ componets-database/
 │   ├── 📁 backend/               # API Flask (app.py + repository.py)
 │   └── 📁 frontend/              # React 18 + Tailwind + Framer Motion (Vite)
 │
-├── 📁 felixo-standards/           # Padrões de qualidade (submódulo)
 ├── start_app.py                   # Setup + coleta com um comando
 ├── IA.md                          # Contexto operacional para IA
 ├── CONTRIBUTING.md                # Guia de contribuição
