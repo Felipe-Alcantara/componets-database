@@ -67,8 +67,8 @@ class DaisyUIAdapter(SourceAdapter):
 
     def _read_example(self, docs_dir, name: str) -> str:
         """Extrai o primeiro bloco HTML de exemplo da doc do componente."""
-        page = docs_dir / name / "+page.md"
-        if not page.is_file():
+        page = self._find_doc(docs_dir, name)
+        if not page:
             return ""
         content = read_text(page)
         blocks = re.findall(r"```html\n(.*?)```", content, re.DOTALL)
@@ -78,3 +78,33 @@ class DaisyUIAdapter(SourceAdapter):
                 # Remove o prefixo de namespace do build ($$btn -> btn)
                 return code.replace("$$", "")
         return ""
+
+    def _find_doc(self, docs_dir, name: str):
+        """
+        Acha o +page.md do componente. O nome do CSS (ex: 'fileinput',
+        'radialprogress') às vezes difere da pasta da doc ('file-input',
+        'radial-progress') ou tem variantes ('mockup' -> 'mockup-browser').
+        """
+        # 1) match direto
+        page = docs_dir / name / "+page.md"
+        if page.is_file():
+            return page
+        if not docs_dir.is_dir():
+            return None
+        # 2) match ignorando hífens (fileinput == file-input)
+        target = name.replace("-", "")
+        candidates = []
+        for d in docs_dir.iterdir():
+            if not d.is_dir():
+                continue
+            norm = d.name.replace("-", "")
+            if norm == target:
+                return d / "+page.md"
+            if norm.startswith(target) or target.startswith(norm):
+                candidates.append(d)
+        # 3) primeira variante que começa com o nome (mockup -> mockup-browser)
+        for d in sorted(candidates):
+            p = d / "+page.md"
+            if p.is_file():
+                return p
+        return None

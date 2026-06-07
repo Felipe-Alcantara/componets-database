@@ -90,7 +90,10 @@ class TwentyFirstAdapter(SourceAdapter):
         )
 
     def derive_public_url(self, source_url: str) -> str:
+        # source_url é o endpoint da API (/r/{author}/{name}) — não é página.
+        # A página pública do 21st é 21st.dev/{author}/{name}.
         parts = source_url.rstrip("/").split("/")
         if len(parts) >= 2:
-            return f"https://21st.dev/r/{parts[-2]}/{parts[-1]}"
-        return source_url
+            author, name = parts[-2], parts[-1]
+            return f"https://21st.dev/{author}/{name}"
+        return "https://21st.dev"

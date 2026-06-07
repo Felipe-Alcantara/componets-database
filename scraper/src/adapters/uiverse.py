@@ -41,24 +41,35 @@ class UniverseAdapter(SourceAdapter):
             html_files = sorted(cat_dir.glob("*.html"))
             print(f"  [uiverse] {category}: {len(html_files)} arquivos")
 
-            for html_file in html_files:
+            # Título legível baseado na categoria (singular) + número sequencial.
+            # Os nomes do Uiverse são slugs aleatórios do autor (ex: "hungry-penguin-30"),
+            # que não dizem nada — então o título usa "Button 1", "Card 2", etc.
+            singular = self._singular(category)
+
+            for idx, html_file in enumerate(html_files, start=1):
                 if len(components) >= config.max_components:
                     break
                 content = read_text(html_file)
                 if not content.strip():
                     continue
                 name = html_file.stem
+                author = name.split("_", 1)[0] if "_" in name else ""
 
+                # O Uiverse não expõe uma URL pública determinística por elemento
+                # (a numeração do arquivo não bate com a do site → 404). O link
+                # confiável é o arquivo no GitHub, que sempre existe e mostra o código.
+                gh_url = f"https://github.com/uiverse-io/galaxy/blob/main/{category}/{html_file.name}"
                 components.append(ComponentDTO(
                     external_id=f"uiverse_{category.lower()}_{name}",
                     name=name,
                     source_slug=self.slug,
-                    source_url=f"https://github.com/uiverse-io/galaxy/blob/main/{category}/{html_file.name}",
-                    public_url=self.derive_public_url(name),
-                    title=name.replace("-", " ").title(),
+                    source_url=gh_url,
+                    public_url=gh_url,
+                    title=f"{singular} {idx}",
                     framework=self.framework,
                     category=category,
                     license=self.license,
+                    author=author,
                     files=[ComponentFile(
                         path=f"{category}/{html_file.name}",
                         content=content,
@@ -69,6 +80,24 @@ class UniverseAdapter(SourceAdapter):
 
         print(f"  [uiverse] total coletado: {len(components)}")
         return components
+
+    def _singular(self, category: str) -> str:
+        """Converte a categoria para um rótulo singular legível."""
+        base = category.replace("-", " ").strip().title()
+        # Plurais comuns do Uiverse
+        specials = {
+            "Toggle Switches": "Toggle Switch",
+            "Radio Buttons": "Radio Button",
+            "Loaders": "Loader",
+            "Patterns": "Pattern",
+        }
+        if base in specials:
+            return specials[base]
+        if base.endswith("es") and base[:-2].endswith(("x", "ch", "sh", "s")):
+            return base[:-2]
+        if base.endswith("s"):
+            return base[:-1]
+        return base
 
     def _find_dir_case_insensitive(self, repo, name: str):
         target = name.lower()
