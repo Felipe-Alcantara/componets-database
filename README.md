@@ -28,6 +28,7 @@ Um agregador que cataloga componentes de UI de bibliotecas open source da comuni
 - [🔧 Funcionalidades Técnicas](#-funcionalidades-técnicas)
 - [⚠️ Limitações](#️-limitações)
 - [🛡️ Licenças & Ética de Coleta](#️-licenças--ética-de-coleta)
+- [🚀 Próximos passos abertos à comunidade](#-próximos-passos-abertos-à-comunidade)
 - [📝 Licença](#-licença)
 - [👤 Autor](#-autor)
 
@@ -239,6 +240,16 @@ Os componentes coletados mantêm a licença original de suas respectivas fontes.
 
 **Felipe Martin**
 - GitHub: [@Felipe-Alcantara](https://github.com/Felipe-Alcantara)
+
+## 🚀 Próximos passos abertos à comunidade
+
+Ideias que o projeto poderia expandir, para quem quiser contribuir:
+
+- **Busca semântica por IA** — encontrar componentes por descrição em linguagem natural
+  (ex.: "um card estilo cyberpunk para dashboard") em vez de só por nome/categoria.
+- **Novas fontes** — adicionar adapters para outras bibliotecas de componentes da comunidade.
+- **Preview visual** — gerar ou coletar imagens de preview dos componentes.
+- **Exportação** — formatos para importar componentes direto em projetos.
 
 ## 🤝 Contribuições
 

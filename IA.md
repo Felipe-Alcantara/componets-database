@@ -24,7 +24,7 @@ coleta correta e respeitosa à licença > escala. Possível evolução: busca se
 - [2026-06-05] ✅ Repositório formatado no padrão Felixo (README, IA.md, start_app, testes)
 - [2026-06-06] ✅ Categorização canônica + tags multi-uso + flag is_demo
 - [2026-06-06] ✅ Banco normalizado relacional (sources/components/tags/files) + índices
-- [ ] ⬜ Camada de busca semântica por IA (planejado, não iniciado)
+- [ ] ⬜ Busca semântica por IA — melhoria aberta à comunidade (ver README, "Próximos passos")
 
 ---
 
