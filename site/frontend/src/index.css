@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --felixo-glow-intensity: 1;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: "Space Grotesk", sans-serif;
+}
+
+/* Seleção de texto na identidade roxa */
+::selection {
+  background: rgba(168, 85, 247, 0.4);
+}
+
+/* Scrollbar customizada (design system Felixo) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(74, 74, 74, 0.8);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(106, 106, 106, 0.9);
+}
+
+/* ---- Glow respirante (breathing glow) ---- */
+
+@keyframes card-glow-breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 15px rgba(168, 85, 247, calc(0.15 * var(--felixo-glow-intensity)));
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(168, 85, 247, calc(0.45 * var(--felixo-glow-intensity)));
+  }
+}
+
+.felixo-card-glow {
+  animation: card-glow-breathe 3s ease-in-out infinite;
+}
+
+.hover-felixo-card-glow:hover {
+  animation: card-glow-breathe 3s ease-in-out infinite;
+}
+
+@keyframes text-glow-breathe {
+  0%,
+  100% {
+    text-shadow: 0 0 8px rgba(168, 85, 247, 0.45), 0 0 20px rgba(168, 85, 247, 0.25);
+  }
+  50% {
+    text-shadow: 0 0 14px rgba(168, 85, 247, 0.7), 0 0 36px rgba(168, 85, 247, 0.4);
+  }
+}
+
+.text-felixo-purple-glow {
+  color: #a855f7;
+  animation: text-glow-breathe 3.8s ease-in-out infinite;
+}
+
+.text-felixo-purple {
+  color: #c084fc;
+}
+
+/* Glow de input em foco */
+.input-glowing-border:focus {
+  box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.4), 0 0 0 4px rgba(168, 85, 247, 0.2);
+  border-color: rgba(168, 85, 247, 0.6);
+}
+
+/* Grade de código com fonte mono */
+.code-block {
+  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, monospace;
+}

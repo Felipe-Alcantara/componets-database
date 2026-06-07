@@ -1,0 +1,19 @@
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ["./index.html", "./src/**/*.{js,jsx}"],
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ["'Space Grotesk'", "sans-serif"],
+      },
+      colors: {
+        // Identidade Felixo
+        felixo: {
+          purple: "#C084FC",
+          "purple-bright": "#A855F7",
+        },
+      },
+    },
+  },
+  plugins: [],
+};
