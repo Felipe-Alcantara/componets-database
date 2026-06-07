@@ -59,5 +59,16 @@ def component_detail(external_id):
     return jsonify(comp)
 
 
+@app.get("/api/components/<external_id>/preview")
+def component_preview(external_id):
+    """Dados mínimos para o mini-preview do card (código + demo, sem metadados)."""
+    if not repo.db_exists():
+        return jsonify({"error": "banco não encontrado. Rode a coleta primeiro."}), 503
+    data = repo.get_preview_data(external_id)
+    if not data:
+        return jsonify({"error": "componente não encontrado"}), 404
+    return jsonify(data)
+
+
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5001, debug=True)

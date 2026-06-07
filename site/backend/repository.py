@@ -103,11 +103,22 @@ def search_components(
         total = conn.execute(f"SELECT COUNT(DISTINCT c.id) {base}", params).fetchone()[0]
 
         offset = (page - 1) * per_page
+        # Prioridade de exibição: componentes que renderizam de verdade primeiro.
+        # 0 = HTML/CSS (preview confiável); 1 = React com demo (renderiza às vezes);
+        # 2 = React sem demo (geralmente só código). Evita abrir o site na cara dos
+        # componentes "não renderizáveis".
+        order = (
+            "ORDER BY CASE "
+            "  WHEN s.framework LIKE '%HTML%' OR s.framework LIKE '%CSS%' THEN 0 "
+            "  WHEN EXISTS (SELECT 1 FROM components d WHERE d.source_id = c.source_id "
+            "               AND d.name = c.name || '-demo') THEN 1 "
+            "  ELSE 2 END, s.slug, c.name"
+        )
         rows = conn.execute(
             f"SELECT DISTINCT c.id, c.external_id, c.name, c.title, c.description, "
             f"c.canonical_category, c.is_demo, c.public_url, c.license, "
             f"s.slug AS source_slug, s.display_name AS source_name, s.framework "
-            f"{base} ORDER BY s.slug, c.name LIMIT ? OFFSET ?",
+            f"{base} {order} LIMIT ? OFFSET ?",
             params + [per_page, offset],
         ).fetchall()
 
@@ -149,6 +160,37 @@ def get_component(external_id: str) -> dict | None:
         # existir. O demo traz uma instância de uso pronta, usada para o preview.
         comp["demo_code"] = _find_demo_code(conn, r)
         return comp
+    finally:
+        conn.close()
+
+
+def get_preview_data(external_id: str) -> dict | None:
+    """
+    Dados mínimos para o preview de um card: framework, fonte, o código do
+    arquivo principal (preferindo HTML) e o demo. Mais leve que get_component.
+    """
+    conn = _connect()
+    try:
+        r = conn.execute(
+            "SELECT c.id, c.name, c.source_id, s.slug AS source_slug, s.framework "
+            "FROM components c JOIN sources s ON s.id = c.source_id "
+            "WHERE c.external_id = ?",
+            (external_id,),
+        ).fetchone()
+        if not r:
+            return None
+
+        files = [dict(f) for f in conn.execute(
+            "SELECT path, type, content FROM component_files WHERE component_id = ?",
+            (r["id"],),
+        )]
+        return {
+            "external_id": external_id,
+            "source_slug": r["source_slug"],
+            "framework": r["framework"],
+            "files": files,
+            "demo_code": _find_demo_code(conn, r),
+        }
     finally:
         conn.close()
 
