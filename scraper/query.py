@@ -6,6 +6,8 @@ Uso:
     python query.py --stats                          # totais por fonte
     python query.py --search button                  # busca por nome/título
     python query.py --search card --framework React  # filtra por framework
+    python query.py --category button --limit 10     # lista por categoria canônica
+    python query.py --categories                     # totais por categoria canônica
     python query.py --source uiverse --limit 10      # lista de uma fonte
     python query.py --show uiverse_buttons_xxx       # mostra um componente
 """
@@ -38,6 +40,29 @@ def cmd_stats(conn: sqlite3.Connection) -> None:
     ).fetchall()
     for r in rows:
         print(f"{r['source_slug']:<15} {r['n']:>7}")
+
+
+def cmd_categories(conn: sqlite3.Connection) -> None:
+    rows = conn.execute(
+        "SELECT canonical_category, COUNT(*) AS n FROM components "
+        "GROUP BY canonical_category ORDER BY n DESC"
+    ).fetchall()
+    print(f"\n{len(rows)} categorias canônicas:\n")
+    print(f"{'Categoria':<18} {'Total':>7}")
+    print("-" * 26)
+    for r in rows:
+        print(f"{r['canonical_category']:<18} {r['n']:>7}")
+
+
+def cmd_category(conn: sqlite3.Connection, category: str, limit: int) -> None:
+    rows = conn.execute(
+        "SELECT external_id, name, title, source_slug FROM components "
+        "WHERE canonical_category = ? ORDER BY source_slug, name LIMIT ?",
+        (category, limit),
+    ).fetchall()
+    print(f"\n{len(rows)} componente(s) na categoria '{category}':\n")
+    for r in rows:
+        print(f"  [{r['source_slug']:<10}] {r['title'] or r['name']}  id={r['external_id']}")
 
 
 def cmd_search(conn: sqlite3.Connection, term: str, framework: str, limit: int) -> None:
@@ -95,6 +120,8 @@ def cmd_show(conn: sqlite3.Connection, external_id: str) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Consulta o banco de componentes")
     parser.add_argument("--stats", action="store_true", help="totais por fonte")
+    parser.add_argument("--categories", action="store_true", help="totais por categoria canônica")
+    parser.add_argument("--category", type=str, help="lista componentes de uma categoria canônica")
     parser.add_argument("--search", type=str, help="busca por nome ou título")
     parser.add_argument("--framework", type=str, default="", help="filtra por framework")
     parser.add_argument("--source", type=str, help="lista componentes de uma fonte")
@@ -106,6 +133,10 @@ def main() -> None:
     try:
         if args.stats:
             cmd_stats(conn)
+        elif args.categories:
+            cmd_categories(conn)
+        elif args.category:
+            cmd_category(conn, args.category, args.limit)
         elif args.search:
             cmd_search(conn, args.search, args.framework, args.limit)
         elif args.source:
