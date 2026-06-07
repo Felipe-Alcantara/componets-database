@@ -22,6 +22,7 @@ coleta correta e respeitosa à licença > escala. Possível evolução: busca se
 - [2026-06-05] ✅ Coleta completa: ~4.700 componentes de 10 fontes no SQLite
 - [2026-06-05] ✅ Float UI adicionado com coleta de metadados apenas (restrição de licença)
 - [2026-06-05] ✅ Repositório formatado no padrão Felixo (README, IA.md, start_app, testes)
+- [2026-06-06] ✅ Categorização canônica + tags multi-uso + flag is_demo
 - [ ] ⬜ Camada de busca semântica por IA (planejado, não iniciado)
 
 ---
@@ -114,6 +115,18 @@ ALTERNATIVAS: (a) deixar de fora; (b) só metadados; (c) coletar tudo assumindo 
 DECISÃO: coletar só metadados — indexa a existência do componente e o link oficial, sem
 guardar o código licenciado.
 VALIDAÇÃO: SQL confirmou files='[]' em todos os 198 registros do floatui.
+
+[2026-06-06] CONTEXTO: categorização inconsistente (Buttons/buttons/""/components),
+405 sem categoria, e componentes multi-uso (botão animado) presos a uma categoria só.
+ALTERNATIVAS: (a) categoria única normalizada; (b) lista de categorias sem primária;
+(c) primária + tags de faceta.
+DECISÃO: (c) — canonical_category continua como primária (navegação/ordenação) e
+category_tags (JSON) guarda todas as facetas para busca multi-uso. Facetas transversais
+(animation, effect, 3d, theme...) somam-se à categoria estrutural. Demos do Magic UI
+marcados com is_demo e escondidos por padrão na busca.
+VALIDAÇÃO: 392 componentes com 2+ tags; busca por 'animation' passou a trazer modal/
+tooltip/progress animados; 139 demos marcados; 26 testes passando. Regras em
+src/categorize.py; migração sem recoleta em migrate_categories.py.
 
 ---
 
