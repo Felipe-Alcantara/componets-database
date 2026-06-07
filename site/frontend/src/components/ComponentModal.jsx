@@ -7,7 +7,7 @@ import { cx, frameworkColor, licenseColor } from "../utils/cx";
 import { buildPreview } from "../utils/preview";
 import { fetchComponent } from "../api";
 
-export function ComponentModal({ component, onClose }) {
+export function ComponentModal({ component, onClose, bg = "light" }) {
   const [detail, setDetail] = useState(null);
   const [tab, setTab] = useState("preview");
   const [activeFile, setActiveFile] = useState(0);
@@ -33,7 +33,7 @@ export function ComponentModal({ component, onClose }) {
   const files = detail?.files || [];
   const hasCode = files.length > 0;
   // Tenta montar o preview (HTML direto ou React via Babel). kind: html|react|none
-  const preview = detail ? buildPreview(detail, files) : { kind: "none" };
+  const preview = detail ? buildPreview(detail, files, bg) : { kind: "none" };
   const previewable = preview.kind !== "none";
 
   // Aba inicial: preview se houver; senão código; senão metadados
@@ -121,7 +121,7 @@ export function ComponentModal({ component, onClose }) {
                   title="preview"
                   sandbox="allow-scripts"
                   srcDoc={preview.doc}
-                  className="w-full h-[420px] rounded-xl border border-white/10 bg-zinc-900"
+                  className="w-full h-[420px] rounded-xl border border-white/10"
                 />
                 {preview.kind === "react" && (
                   <p className="mt-2 text-[11px] text-zinc-500">

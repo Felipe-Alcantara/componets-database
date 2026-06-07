@@ -29,6 +29,17 @@ export function isReactFramework(framework = "") {
 
 const DAISYUI_CDN = "https://cdn.jsdelivr.net/npm/daisyui@4/dist/full.min.css";
 
+/** Cores de fundo do preview, selecionáveis pelo usuário. */
+export const PREVIEW_BACKGROUNDS = {
+  light: "#f4f4f5",
+  gray: "#71717a",
+  dark: "#18181b",
+};
+
+function bgColor(bg) {
+  return PREVIEW_BACKGROUNDS[bg] || PREVIEW_BACKGROUNDS.light;
+}
+
 /**
  * Auto-ajuste robusto: mede a "caixa" real do conteúdo (bounding box de todos os
  * filhos, cobrindo elementos posicionados/absolutos que estouram) e aplica um
@@ -80,7 +91,7 @@ const FIT_SCRIPT = `
 `;
 
 /** Documento para componentes HTML/CSS (markup + <style> embutido). */
-function buildHtmlDoc(html, withDaisyUI = false) {
+function buildHtmlDoc(html, withDaisyUI = false, bg = "light") {
   // DaisyUI precisa do seu próprio CSS além do Tailwind para as classes (btn, alert…).
   const daisy = withDaisyUI ? `<link rel="stylesheet" href="${DAISYUI_CDN}" />` : "";
   return `<!doctype html>
@@ -91,7 +102,7 @@ function buildHtmlDoc(html, withDaisyUI = false) {
     <script src="${TAILWIND_CDN}"></script>
     <style>
       html, body { margin:0; width:100%; height:100%; overflow:hidden;
-        background:#f4f4f5; }
+        background:${bgColor(bg)}; }
       body { display:flex; align-items:center; justify-content:center; box-sizing:border-box;
         padding:20px; }
       #fit { transform-origin:center center; display:inline-block; }
@@ -254,7 +265,7 @@ function renderSnippet(target, withChildren) {
  * O código vai num <script type="application/json"> para não ser interpretado
  * como JS cru pelo navegador.
  */
-function reactHtml(body) {
+function reactHtml(body, bg = "light") {
   const payload = JSON.stringify(body);
   return `<!doctype html>
 <html class="dark">
@@ -266,7 +277,7 @@ function reactHtml(body) {
     <script src="${MOTION_CDN}"></script>
     <script src="${BABEL_CDN}"></script>
     <style>
-      html, body { margin:0; width:100%; height:100%; overflow:hidden; background:#f4f4f5; }
+      html, body { margin:0; width:100%; height:100%; overflow:hidden; background:${bgColor(bg)}; }
       body { display:flex; align-items:center; justify-content:center; box-sizing:border-box; }
       #fit { transform-origin:center center; display:inline-block; }
     </style>
@@ -300,27 +311,27 @@ function reactHtml(body) {
  * Documento React usando o DEMO como instância de uso.
  * Concatena o código do componente + o demo (que o instancia) e renderiza o demo.
  */
-function buildReactDocWithDemo(componentCode, demoCode) {
+function buildReactDocWithDemo(componentCode, demoCode, bg = "light") {
   const icons = iconBindings(componentCode, demoCode);
   const comp = stripImportsExports(componentCode);
   const demoName = /export\s+default\s+function\s+([A-Za-z0-9_]+)/.exec(demoCode);
   const demo = stripImportsExports(demoCode);
   const target = demoName ? demoName[1] : "__default__";
-  return reactHtml(`${reactRuntime()}\n${icons}\n${comp}\n${demo}\n${renderSnippet(target, false)}`);
+  return reactHtml(`${reactRuntime()}\n${icons}\n${comp}\n${demo}\n${renderSnippet(target, false)}`, bg);
 }
 
 /** Documento para componentes React sem demo (auto-render do export). */
-function buildReactDoc(code) {
+function buildReactDoc(code, bg = "light") {
   const icons = iconBindings(code);
   const { src, target } = prepareReactSource(code);
-  return reactHtml(`${reactRuntime()}\n${icons}\n${src}\n${renderSnippet(target, true)}`);
+  return reactHtml(`${reactRuntime()}\n${icons}\n${src}\n${renderSnippet(target, true)}`, bg);
 }
 
 /**
  * Decide o tipo de preview a partir do componente e dos arquivos coletados.
  * Retorna { kind: 'html'|'react'|'none', doc } — doc é o srcDoc do iframe.
  */
-export function buildPreview(component, files = []) {
+export function buildPreview(component, files = [], bg = "light") {
   const list = Array.isArray(files) ? files : [];
   // Arquivo de marcação para preview: .html explícito, NUNCA .css (que renderiza
   // como texto cru). Se a fonte tem só CSS, não há preview.
@@ -334,16 +345,16 @@ export function buildPreview(component, files = []) {
   if (isHtmlFramework(component.framework)) {
     if (!htmlFile?.content) return { kind: "none", doc: "" };
     const isDaisy = component.source_slug === "daisyui";
-    return { kind: "html", doc: buildHtmlDoc(htmlFile.content, isDaisy) };
+    return { kind: "html", doc: buildHtmlDoc(htmlFile.content, isDaisy, bg) };
   }
   if (isReactFramework(component.framework)) {
     const code = codeFile?.content;
     if (!code) return { kind: "none", doc: "" };
     // Com demo: renderiza a instância de uso (muito mais fiel). Sem: auto-render.
     if (component.demo_code) {
-      return { kind: "react", doc: buildReactDocWithDemo(code, component.demo_code) };
+      return { kind: "react", doc: buildReactDocWithDemo(code, component.demo_code, bg) };
     }
-    return { kind: "react", doc: buildReactDoc(code) };
+    return { kind: "react", doc: buildReactDoc(code, bg) };
   }
   return { kind: "none", doc: "" };
 }

@@ -22,6 +22,8 @@ export default function App() {
   // Ordenação: aleatória por padrão (como Uiverse). seed muda ao embaralhar.
   const [sort, setSort] = useState("random");
   const [seed, setSeed] = useState(() => Math.floor(Math.random() * 100000) + 1);
+  // Fundo do preview dos componentes: light | gray | dark
+  const [bg, setBg] = useState("light");
   const debounce = useRef(null);
 
   // Carrega as opções de filtro uma vez
@@ -120,6 +122,31 @@ export default function App() {
               <Shuffle size={16} />
             </Button>
           )}
+          {/* Fundo do preview: branco / cinza / preto */}
+          <div
+            className="flex items-center gap-1 h-10 rounded-xl border border-white/10 px-1.5"
+            title="Fundo do preview"
+          >
+            {[
+              ["light", "#f4f4f5", "Branco"],
+              ["gray", "#71717a", "Cinza"],
+              ["dark", "#18181b", "Preto"],
+            ].map(([key, color, label]) => (
+              <button
+                key={key}
+                onClick={() => setBg(key)}
+                title={label}
+                aria-label={`Fundo ${label}`}
+                className={
+                  "w-6 h-6 rounded-md border transition " +
+                  (bg === key
+                    ? "border-purple-400 ring-2 ring-purple-500/40"
+                    : "border-white/20 hover:border-white/40")
+                }
+                style={{ background: color }}
+              />
+            ))}
+          </div>
           <Button
             variant="outline"
             onClick={() => setShowFilters((s) => !s)}
@@ -175,6 +202,7 @@ export default function App() {
                       key={c.external_id}
                       component={c}
                       onOpen={setSelected}
+                      bg={bg}
                     />
                   ))}
                 </div>
@@ -210,7 +238,7 @@ export default function App() {
       </div>
 
       {selected && (
-        <ComponentModal component={selected} onClose={() => setSelected(null)} />
+        <ComponentModal component={selected} onClose={() => setSelected(null)} bg={bg} />
       )}
     </div>
   );

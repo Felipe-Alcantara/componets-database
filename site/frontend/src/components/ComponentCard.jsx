@@ -6,7 +6,7 @@ import { cx, frameworkColor } from "../utils/cx";
  * Card de um componente no grid, no padrão de galeria (Uiverse/21st):
  * preview grande em cima, informação compacta embaixo.
  */
-export function ComponentCard({ component, onOpen }) {
+export function ComponentCard({ component, onOpen, bg = "light" }) {
   const { external_id, name, title, source_name, framework, canonical_category } =
     component;
 
@@ -20,8 +20,8 @@ export function ComponentCard({ component, onOpen }) {
       className="group text-left rounded-2xl border border-white/10 bg-zinc-950/40 overflow-hidden hover:border-purple-500/40 transition"
     >
       {/* Preview ao vivo (fundo claro, ocupa a maior parte do card) */}
-      <div className="aspect-[4/3] bg-zinc-100 overflow-hidden">
-        <LivePreview externalId={external_id} className="w-full h-full" />
+      <div className="aspect-[4/3] overflow-hidden">
+        <LivePreview externalId={external_id} className="w-full h-full" bg={bg} />
       </div>
 
       {/* Info compacta */}
