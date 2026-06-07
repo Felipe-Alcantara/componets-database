@@ -24,18 +24,23 @@ coleta correta e respeitosa à licença > escala. Possível evolução: busca se
 - [2026-06-05] ✅ Repositório formatado no padrão Felixo (README, IA.md, start_app, testes)
 - [2026-06-06] ✅ Categorização canônica + tags multi-uso + flag is_demo
 - [2026-06-06] ✅ Banco normalizado relacional (sources/components/tags/files) + índices
+- [2026-06-07] ✅ Site (biblioteca visual): API Flask + React/Tailwind/Framer (Vite), busca,
+  filtros, preview ao vivo, código e metadados — no design system Felixo
 - [ ] ⬜ Busca semântica por IA — melhoria aberta à comunidade (ver README, "Próximos passos")
 
 ---
 
 ## 🛠️ STACK & DEPENDÊNCIAS
 
-[2026-06-05] Python 3.11+ (sem framework web — é uma CLI/coletor)
+[2026-06-05] Python 3.11+ (coletor é CLI; o site adiciona uma API web — ver abaixo)
 [2026-06-05] httpx — cliente HTTP para registries JSON e APIs
 [2026-06-05] beautifulsoup4 — parser HTML/offline (disponível para adapters que precisarem)
 [2026-06-05] git (CLI) — clone shallow de repositórios públicos via subprocess
 [2026-06-05] SQLite (stdlib) — persistência; sem ORM, SQL direto em persistence.py
 [2026-06-05] Sem Django/banco externo por decisão explícita do usuário (foco no scraping)
+[2026-06-07] Site/backend: Flask + flask-cors — API REST sobre o mesmo SQLite (site/backend)
+[2026-06-07] Site/frontend: React 18 + Tailwind 3 + Framer Motion + Vite (site/frontend),
+seguindo o design system Felixo (tema escuro, glow roxo, partículas)
 
 ---
 
@@ -52,6 +57,9 @@ detalhes de cada site. Seguir o guia GUIA-SCRAPING-MULTIFORMATO do Felixo.
 [2026-06-06] Banco relacional normalizado em schema.py: sources, components, tags,
 component_tags (N:N), component_files, component_dependencies, com FKs e índices.
 persistence.py recria relações filhas no update (idempotente). query.py usa JOINs.
+[2026-06-07] Site separado em backend (Flask) e frontend (React/Vite). Backend segue
+camadas: repository.py (única ponte com SQLite) + app.py (web fina). Frontend consome
+/api via proxy do Vite (sem host hardcoded). Preview ao vivo em iframe sandbox + Tailwind CDN.
 
 ---
 

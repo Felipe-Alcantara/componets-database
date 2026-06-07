@@ -71,6 +71,11 @@ componets-database/
 │   │   └── 📁 adapters/           # Um adapter por fonte
 │   └── 📁 tests/                  # Testes offline (31 testes)
 │
+├── 📁 site/                       # Site: biblioteca visual de componentes
+│   ├── start_app.py              # Sobe backend + frontend e abre o navegador
+│   ├── 📁 backend/               # API Flask (app.py + repository.py)
+│   └── 📁 frontend/              # React 18 + Tailwind + Framer Motion (Vite)
+│
 ├── 📁 felixo-standards/           # Padrões de qualidade (submódulo)
 ├── start_app.py                   # Setup + coleta com um comando
 ├── IA.md                          # Contexto operacional para IA
@@ -187,6 +192,18 @@ python query.py --search "button" --framework React
 python query.py --category animation    # busca multi-uso (qualquer tipo animado)
 python query.py --show magicui_shimmer-button
 ```
+
+### Opção 3: Navegar pela biblioteca visual (site) 🖥️
+
+Depois de coletar, suba o site para explorar os componentes com busca, filtros, preview
+ao vivo e código — na pasta `site/`:
+
+```bash
+python start_app.py
+```
+
+Sobe a API (Flask) e o frontend (React/Vite) e abre o navegador. Detalhes em
+[`site/README.md`](site/README.md).
 
 ---
 
