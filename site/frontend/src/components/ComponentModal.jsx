@@ -4,21 +4,8 @@ import { X, ExternalLink, Copy, Check, Eye, Code2 } from "lucide-react";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
 import { cx, frameworkColor, licenseColor } from "../utils/cx";
+import { buildPreview } from "../utils/preview";
 import { fetchComponent } from "../api";
-
-/** Frameworks cujo código é HTML puro e pode ser pré-visualizado num iframe. */
-function isPreviewable(framework = "") {
-  const f = framework.toLowerCase();
-  return f.includes("html") || f.includes("css");
-}
-
-/** Monta um documento HTML isolado com Tailwind CDN para o preview ao vivo. */
-function buildPreviewDoc(html) {
-  return `<!doctype html><html><head><meta charset="utf-8">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>body{margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#18181b;padding:24px;}</style>
-  </head><body>${html}</body></html>`;
-}
 
 export function ComponentModal({ component, onClose }) {
   const [detail, setDetail] = useState(null);
@@ -43,14 +30,19 @@ export function ComponentModal({ component, onClose }) {
 
   const files = detail?.files || [];
   const mainFile = files[0];
-  const previewable = detail && isPreviewable(detail.framework) && mainFile?.content;
   const hasCode = files.length > 0;
+  // Tenta montar o preview (HTML direto ou React via Babel). kind: html|react|none
+  const preview = detail ? buildPreview(detail, files) : { kind: "none" };
+  const previewable = preview.kind !== "none";
 
-  // Sem código (ex: Float UI — só metadados): mostra direto os metadados
+  // Aba inicial: preview se houver; senão código; senão metadados
   useEffect(() => {
-    if (detail && !hasCode) setTab("info");
-    else if (detail && !isPreviewable(detail.framework)) setTab("code");
-  }, [detail, hasCode]);
+    if (!detail) return;
+    if (previewable) setTab("preview");
+    else if (hasCode) setTab("code");
+    else setTab("info");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detail]);
 
   const copyCode = () => {
     if (!mainFile?.content) return;
@@ -115,12 +107,20 @@ export function ComponentModal({ component, onClose }) {
             )}
 
             {detail && tab === "preview" && previewable && (
-              <iframe
-                title="preview"
-                sandbox="allow-scripts"
-                srcDoc={buildPreviewDoc(mainFile.content)}
-                className="w-full h-[420px] rounded-xl border border-white/10 bg-zinc-900"
-              />
+              <div>
+                <iframe
+                  title="preview"
+                  sandbox="allow-scripts"
+                  srcDoc={preview.doc}
+                  className="w-full h-[420px] rounded-xl border border-white/10 bg-zinc-900"
+                />
+                {preview.kind === "react" && (
+                  <p className="mt-2 text-[11px] text-zinc-500">
+                    Preview React compilado no navegador — alguns componentes com
+                    dependências específicas podem não renderizar; nesses casos, use a aba Código.
+                  </p>
+                )}
+              </div>
             )}
 
             {detail && tab === "code" && hasCode && (
