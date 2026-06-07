@@ -26,6 +26,9 @@ coleta correta e respeitosa à licença > escala. Possível evolução: busca se
 - [2026-06-06] ✅ Banco normalizado relacional (sources/components/tags/files) + índices
 - [2026-06-07] ✅ Site (biblioteca visual): API Flask + React/Tailwind/Framer (Vite), busca,
   filtros, preview ao vivo, código e metadados — no design system Felixo
+- [2026-06-07] ✅ Preview ao vivo: HTML direto (Uiverse/HyperUI/DaisyUI) + React compilado
+  com Babel no iframe usando o -demo como instância. HyperUI recoletado (HTML real de
+  public/examples), DaisyUI com exemplo de uso. Banco passou a ~4943 componentes.
 - [ ] ⬜ Busca semântica por IA — melhoria aberta à comunidade (ver README, "Próximos passos")
 
 ---

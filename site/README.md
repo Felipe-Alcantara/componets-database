@@ -10,7 +10,11 @@ Framer Motion + Vite**, seguindo o design system do Felixo System Design.
 - **Busca** por nome, título e descrição (com debounce)
 - **Filtros** combináveis: categoria, fonte, framework e tags (facetas multi-uso)
 - **Modal de detalhe** com:
-  - **Preview ao vivo** dos componentes HTML/CSS (Uiverse, HyperUI, DaisyUI) em iframe isolado
+  - **Preview ao vivo** em iframe isolado:
+    - HTML/CSS (Uiverse, HyperUI, DaisyUI) — renderiza direto, com Tailwind/DaisyUI via CDN
+    - React (shadcn, Magic UI, Aceternity, etc.) — compila no navegador com Babel,
+      usando o código do `-demo` como instância de uso quando disponível; cai num
+      aviso claro (+ aba Código) quando o componente depende de algo não resolvível
   - **Código** com botão de copiar
   - **Metadados**: fonte, framework, licença, dependências, link de origem
 - **Paginação** sobre os milhares de componentes
@@ -80,5 +84,8 @@ Segue a separação de responsabilidades do padrão backend Felixo:
 - **`app.py`** — camada web fina: valida entrada, chama o repository, serializa JSON
 - **frontend** — consome a API via `/api` (proxy do Vite em dev, sem host hardcoded)
 
-O preview ao vivo roda em `<iframe sandbox>` isolado, com Tailwind via CDN, sem executar
-código não confiável no contexto da página.
+O preview ao vivo roda em `<iframe sandbox>` isolado, sem executar código no contexto da
+página. Para HTML, injeta o markup com Tailwind (e DaisyUI quando for o caso) via CDN.
+Para React, compila o código com Babel standalone dentro do iframe e renderiza a instância
+de uso vinda do `-demo`; hooks do React e utilitários comuns (`cn`, `motion`, primitivos
+de UI) são fornecidos por stubs. A lógica do preview fica em `src/utils/preview.js`.
