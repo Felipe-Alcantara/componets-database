@@ -76,8 +76,20 @@ def search_components(
     if not include_demos:
         where.append("c.is_demo = 0")
     if q:
-        where.append("(c.name LIKE ? OR c.title LIKE ? OR c.description LIKE ?)")
-        params += [f"%{q}%", f"%{q}%", f"%{q}%"]
+        # Busca em camadas: campos do componente, tags e — importante — o próprio
+        # código. Muitos componentes têm nome genérico ("Footers 1") mas o código
+        # menciona "instagram", "discord", "loading" etc. O termo de relevância
+        # (campos vs código) é tratado na ordenação abaixo.
+        like = f"%{q}%"
+        where.append(
+            "(c.name LIKE ? OR c.title LIKE ? OR c.description LIKE ? "
+            " OR EXISTS (SELECT 1 FROM component_tags ctq JOIN tags tq "
+            "            ON tq.id = ctq.tag_id "
+            "            WHERE ctq.component_id = c.id AND tq.name LIKE ?) "
+            " OR EXISTS (SELECT 1 FROM component_files cfq "
+            "            WHERE cfq.component_id = c.id AND cfq.content LIKE ?))"
+        )
+        params += [like, like, like, like, like]
     if source:
         where.append("s.slug = ?")
         params.append(source)
@@ -119,21 +131,32 @@ def search_components(
             "               AND d.name = c.name || '-demo') THEN 1 "
             "  ELSE 2 END"
         )
+        # Relevância da busca: casar no nome/título vem antes de casar só no código.
+        relevance = ""
+        if q:
+            relevance = (
+                "CASE WHEN c.name LIKE ? OR c.title LIKE ? THEN 0 ELSE 1 END, "
+            )
+
         if sort == "random":
             # Embaralhamento estável por seed (mesma página → mesma ordem ao paginar),
-            # mas ainda priorizando os renderizáveis. (c.id * seed) % primo gera a
-            # permutação pseudo-aleatória determinística.
-            order = f"ORDER BY {priority}, (c.id * {int(seed)}) % 100003"
+            # mas ainda priorizando relevância e renderizáveis.
+            order = f"ORDER BY {relevance}{priority}, (c.id * {int(seed)}) % 100003"
         elif sort == "name":
-            order = "ORDER BY c.title, c.name"
+            order = f"ORDER BY {relevance}c.title, c.name"
         else:  # smart
-            order = f"ORDER BY {priority}, s.slug, c.name"
+            order = f"ORDER BY {relevance}{priority}, s.slug, c.name"
+
+        # Params da relevância entram ANTES dos de LIMIT/OFFSET (que serão somados
+        # ao chamar execute). O ORDER BY é avaliado após o WHERE, mas no SQLite os
+        # placeholders são posicionais na ordem do texto: WHERE..., depois ORDER BY.
+        order_params = [f"%{q}%", f"%{q}%"] if q else []
         rows = conn.execute(
             f"SELECT DISTINCT c.id, c.external_id, c.name, c.title, c.description, "
             f"c.canonical_category, c.is_demo, c.public_url, c.license, "
             f"s.slug AS source_slug, s.display_name AS source_name, s.framework "
             f"{base} {order} LIMIT ? OFFSET ?",
-            params + [per_page, offset],
+            params + order_params + [per_page, offset],
         ).fetchall()
 
         items = [_attach_tags(conn, dict(r)) for r in rows]
