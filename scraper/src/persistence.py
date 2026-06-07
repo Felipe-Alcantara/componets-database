@@ -4,10 +4,14 @@ import dataclasses
 from datetime import datetime, timezone
 from pathlib import Path
 from .models import ComponentDTO, ComponentFile, ImportSummary
+from .categorize import canonical_category
 
 
 def _dto_to_dict(dto: ComponentDTO) -> dict:
     d = dataclasses.asdict(dto)
+    # Deriva a categoria canônica de forma centralizada (todas as fontes).
+    if not d.get("canonical_category"):
+        d["canonical_category"] = canonical_category(dto.name, dto.category)
     d["files"] = json.dumps(d["files"])
     d["dependencies"] = json.dumps(d["dependencies"])
     d["dev_dependencies"] = json.dumps(d["dev_dependencies"])
@@ -42,6 +46,7 @@ def init_db(db_path: Path) -> sqlite3.Connection:
             description TEXT,
             framework TEXT,
             category TEXT,
+            canonical_category TEXT,
             license TEXT,
             author TEXT,
             dependencies TEXT,
@@ -90,13 +95,14 @@ def persist_components(
             conn.execute(
                 """UPDATE components SET
                     name=?, source_url=?, public_url=?, title=?, description=?,
-                    framework=?, category=?, license=?, author=?, dependencies=?,
-                    dev_dependencies=?, tags=?, files=?, preview_image=?,
+                    framework=?, category=?, canonical_category=?, license=?, author=?,
+                    dependencies=?, dev_dependencies=?, tags=?, files=?, preview_image=?,
                     capture_source=?, extras=?, last_seen_at=?
                 WHERE external_id=?""",
                 (
                     d["name"], d["source_url"], d["public_url"], d["title"],
-                    d["description"], d["framework"], d["category"], d["license"],
+                    d["description"], d["framework"], d["category"],
+                    d["canonical_category"], d["license"],
                     d["author"], d["dependencies"], d["dev_dependencies"], d["tags"],
                     d["files"], d["preview_image"], d["capture_source"], d["extras"],
                     now, dto.external_id,
@@ -107,16 +113,16 @@ def persist_components(
             conn.execute(
                 """INSERT INTO components (
                     external_id, name, source_slug, source_url, public_url,
-                    title, description, framework, category, license, author,
-                    dependencies, dev_dependencies, tags, files, preview_image,
-                    capture_source, extras, first_seen_at, last_seen_at
-                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    title, description, framework, category, canonical_category,
+                    license, author, dependencies, dev_dependencies, tags, files,
+                    preview_image, capture_source, extras, first_seen_at, last_seen_at
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (
                     dto.external_id, d["name"], d["source_slug"], d["source_url"],
                     d["public_url"], d["title"], d["description"], d["framework"],
-                    d["category"], d["license"], d["author"], d["dependencies"],
-                    d["dev_dependencies"], d["tags"], d["files"], d["preview_image"],
-                    d["capture_source"], d["extras"], now, now,
+                    d["category"], d["canonical_category"], d["license"], d["author"],
+                    d["dependencies"], d["dev_dependencies"], d["tags"], d["files"],
+                    d["preview_image"], d["capture_source"], d["extras"], now, now,
                 ),
             )
             summary.created += 1

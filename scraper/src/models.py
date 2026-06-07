@@ -19,6 +19,7 @@ class ComponentDTO:
     description: str = ""
     framework: str = ""
     category: str = ""
+    canonical_category: str = ""
     license: str = ""
     author: str = ""
     dependencies: list[str] = field(default_factory=list)
