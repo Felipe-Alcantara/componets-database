@@ -145,9 +145,23 @@ def get_component(external_id: str) -> dict | None:
             "SELECT name, is_dev FROM component_dependencies WHERE component_id = ?",
             (r["id"],),
         )]
+        # Para componentes React, anexa o código do "-demo" correspondente, quando
+        # existir. O demo traz uma instância de uso pronta, usada para o preview.
+        comp["demo_code"] = _find_demo_code(conn, r)
         return comp
     finally:
         conn.close()
+
+
+def _find_demo_code(conn: sqlite3.Connection, row) -> str:
+    """Busca o código do demo associado ('<name>-demo') na mesma fonte."""
+    demo = conn.execute(
+        "SELECT cf.content FROM components c "
+        "JOIN component_files cf ON cf.component_id = c.id "
+        "WHERE c.source_id = ? AND c.name = ? LIMIT 1",
+        (row["source_id"], f"{row['name']}-demo"),
+    ).fetchone()
+    return demo[0] if demo else ""
 
 
 def _attach_tags(conn: sqlite3.Connection, comp: dict) -> dict:
