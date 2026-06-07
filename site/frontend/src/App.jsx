@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, Loader2, SlidersHorizontal } from "lucide-react";
+import { Search, Loader2, SlidersHorizontal, Shuffle } from "lucide-react";
 import { BackgroundParticles } from "./components/BackgroundParticles";
 import { FilterSidebar } from "./components/FilterSidebar";
 import { ComponentCard } from "./components/ComponentCard";
@@ -19,6 +19,9 @@ export default function App() {
   const [error, setError] = useState("");
   const [selected, setSelected] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
+  // Ordenação: aleatória por padrão (como Uiverse). seed muda ao embaralhar.
+  const [sort, setSort] = useState("random");
+  const [seed, setSeed] = useState(() => Math.floor(Math.random() * 100000) + 1);
   const debounce = useRef(null);
 
   // Carrega as opções de filtro uma vez
@@ -26,12 +29,12 @@ export default function App() {
     fetchFilters().then(setFilters).catch((e) => setError(e.message));
   }, []);
 
-  // Busca componentes sempre que filtros ou página mudam (com debounce na busca textual)
+  // Busca componentes sempre que filtros, página ou ordenação mudam
   useEffect(() => {
     setLoading(true);
     clearTimeout(debounce.current);
     debounce.current = setTimeout(() => {
-      fetchComponents({ ...active, page, per_page: 24 })
+      fetchComponents({ ...active, sort, seed, page, per_page: 24 })
         .then((d) => {
           setData(d);
           setError("");
@@ -40,7 +43,13 @@ export default function App() {
         .finally(() => setLoading(false));
     }, 250);
     return () => clearTimeout(debounce.current);
-  }, [active, page]);
+  }, [active, page, sort, seed]);
+
+  const shuffle = () => {
+    setSort("random");
+    setSeed(Math.floor(Math.random() * 100000) + 1);
+    setPage(1);
+  };
 
   const updateFilter = (patch) => {
     setActive((prev) => ({ ...prev, ...patch }));
@@ -92,6 +101,25 @@ export default function App() {
               onChange={(e) => updateFilter({ q: e.target.value })}
             />
           </div>
+          {/* Ordenação */}
+          <select
+            value={sort}
+            onChange={(e) => {
+              setSort(e.target.value);
+              setPage(1);
+            }}
+            className="h-10 rounded-xl bg-zinc-800/50 border border-white/10 px-3 text-sm text-zinc-200 outline-none"
+            aria-label="Ordenar"
+          >
+            <option value="random">Aleatório</option>
+            <option value="smart">Recomendado</option>
+            <option value="name">Nome (A-Z)</option>
+          </select>
+          {sort === "random" && (
+            <Button variant="outline" onClick={shuffle} title="Embaralhar">
+              <Shuffle size={16} />
+            </Button>
+          )}
           <Button
             variant="outline"
             onClick={() => setShowFilters((s) => !s)}
@@ -141,7 +169,7 @@ export default function App() {
 
             {data && data.items.length > 0 && (
               <>
-                <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-5">
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
                   {data.items.map((c) => (
                     <ComponentCard
                       key={c.external_id}
