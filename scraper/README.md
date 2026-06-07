@@ -7,18 +7,34 @@ open source num banco SQLite, seguindo o padrão de scraping multiformato do Fel
 
 ```
 scraper/
-├── main.py            # CLI de coleta
-├── query.py           # CLI de consulta ao banco
-├── requirements.txt   # Dependências
+├── main.py                 # CLI de coleta
+├── query.py                # CLI de consulta (JOINs, --tags, --category)
+├── migrate_relational.py   # Migração: banco flat -> esquema relacional
+├── requirements.txt        # Dependências
 ├── src/
-│   ├── config.py      # Limites operacionais (env vars)
-│   ├── models.py      # ComponentDTO — contrato puro, sem ORM
-│   ├── registry.py    # Mapa de adapters (ponto único de descoberta)
-│   ├── persistence.py # Upsert idempotente em JSON + SQLite
-│   ├── git_clone.py   # Cache de clones de repositórios públicos
-│   └── adapters/      # Um adapter por fonte (interface SourceAdapter)
-└── tests/             # Testes offline dos parsers (sem rede)
+│   ├── config.py           # Limites operacionais (env vars)
+│   ├── models.py           # ComponentDTO — contrato puro, sem ORM
+│   ├── schema.py           # Esquema relacional + índices
+│   ├── categorize.py       # Categoria primária + tags de faceta
+│   ├── registry.py         # Mapa de adapters (ponto único de descoberta)
+│   ├── persistence.py      # Upsert idempotente no banco relacional
+│   ├── git_clone.py        # Cache de clones de repositórios públicos
+│   └── adapters/           # Um adapter por fonte (interface SourceAdapter)
+└── tests/                  # Testes offline (sem rede)
 ```
+
+## 🗄️ Esquema do banco (relacional)
+
+```
+sources (1) ──< components (N) >──< tags     [component_tags]
+                     ├──< component_files
+                     └──< component_dependencies
+```
+
+- `canonical_category`: categoria primária (navegação)
+- `tags`: facetas multi-uso (um botão animado é `button` E `animation`)
+- `is_demo`: marca variações de exemplo, escondidas por padrão na busca
+- Índices em source, categoria, is_demo, nome e nas FKs
 
 ## 🚀 Uso
 
@@ -30,7 +46,22 @@ python main.py --source magicui --limit 50          # preview (não grava)
 python main.py --all-sources --commit --no-interactive  # coleta tudo no banco
 
 python query.py --stats                             # totais por fonte
-python query.py --search button --framework React   # busca
+python query.py --categories                        # por categoria primária
+python query.py --tags                              # por faceta (tag)
+python query.py --category animation                # busca multi-uso
+python query.py --search button --framework React   # busca textual
+```
+
+## 🔄 Migrações
+
+Para bancos coletados antes destas mudanças (sem recoletar):
+
+```bash
+# Converte a tabela flat antiga no esquema relacional.
+# Já deriva categoria primária, tags e is_demo se as colunas não existirem.
+python migrate_relational.py --commit
+# Gera data/components.relational.db; revise e promova:
+#   mv data/components.relational.db data/components.db
 ```
 
 ## ⚙️ Configuração (env vars)

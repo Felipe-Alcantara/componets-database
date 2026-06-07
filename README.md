@@ -23,6 +23,7 @@ Um agregador que cataloga componentes de UI de bibliotecas open source da comuni
 - [📋 Sobre o Projeto](#-sobre-o-projeto)
 - [📁 Estrutura do Projeto](#-estrutura-do-projeto)
 - [🔌 Fontes Coletadas](#-fontes-coletadas)
+- [🗄️ Banco de Dados](#️-banco-de-dados)
 - [🚀 Como Usar](#-como-usar)
 - [🔧 Funcionalidades Técnicas](#-funcionalidades-técnicas)
 - [⚠️ Limitações](#️-limitações)
@@ -55,16 +56,19 @@ componets-database/
 │
 ├── 📁 scraper/                    # Coletor de componentes
 │   ├── main.py                    # CLI principal (--source, --all-sources)
-│   ├── query.py                   # Consulta o banco coletado
+│   ├── query.py                   # Consulta o banco (JOINs, --tags, --category)
+│   ├── migrate_relational.py      # Migração: banco flat -> esquema relacional
 │   ├── requirements.txt           # Dependências Python
 │   ├── 📁 src/
 │   │   ├── config.py              # Limites operacionais (env vars)
 │   │   ├── models.py              # ComponentDTO (contrato puro)
+│   │   ├── schema.py              # Esquema relacional + índices
+│   │   ├── categorize.py          # Categoria canônica + tags de faceta
 │   │   ├── registry.py            # Mapa de todos os adapters
-│   │   ├── persistence.py         # Upsert idempotente (JSON + SQLite)
+│   │   ├── persistence.py         # Upsert idempotente no banco relacional
 │   │   ├── git_clone.py           # Cache de clones de repositórios
 │   │   └── 📁 adapters/           # Um adapter por fonte
-│   └── 📁 tests/                  # Testes offline dos parsers
+│   └── 📁 tests/                  # Testes offline (31 testes)
 │
 ├── 📁 felixo-standards/           # Padrões de qualidade (submódulo)
 ├── start_app.py                   # Setup + coleta com um comando
@@ -91,6 +95,42 @@ componets-database/
 | 21st.dev | ~38 | registry JSON | MIT |
 
 > Os números variam a cada coleta conforme as fontes recebem novos componentes.
+
+---
+
+## 🗄️ Banco de Dados
+
+O banco é **SQLite** com esquema **relacional normalizado** (chaves estrangeiras e
+índices). Listas como tags, arquivos e dependências viram tabelas próprias — buscas
+usam JOIN indexado em vez de varrer texto.
+
+```
+sources (1) ──< (N) components (N) >──< (N) tags        [via component_tags]
+                         │
+                         ├──< (N) component_files         (código por arquivo)
+                         └──< (N) component_dependencies  (deps npm)
+```
+
+| Tabela | Papel |
+|--------|-------|
+| `sources` | Uma linha por fonte (slug, framework, licença) |
+| `components` | Núcleo: nome, categoria primária, is_demo, URLs, FK p/ source |
+| `tags` + `component_tags` | Facetas multi-uso (N:N) — um botão animado é `button` E `animation` |
+| `component_files` | Código dos componentes (1 linha por arquivo) |
+| `component_dependencies` | Dependências npm declaradas |
+
+**Categorização em duas camadas:**
+- `canonical_category` — categoria **primária** única, para navegação
+- `tags` — **todas as facetas** aplicáveis, para busca por caso de uso
+
+```bash
+python query.py --categories          # totais por categoria primária
+python query.py --tags                # totais por faceta
+python query.py --category animation  # tudo que é animado, de qualquer tipo
+```
+
+Variações de demonstração (`-demo`) são marcadas com `is_demo` e escondidas por
+padrão; use `--include-demos` para vê-las.
 
 ---
 
@@ -139,8 +179,12 @@ python main.py --source magicui --limit 50
 python main.py --all-sources --commit --no-interactive
 
 # Consultar o banco
-python query.py --stats
+python query.py --stats                 # totais por fonte
+python query.py --categories            # totais por categoria primária
+python query.py --tags                  # totais por faceta (tag)
 python query.py --search "button" --framework React
+python query.py --category animation    # busca multi-uso (qualquer tipo animado)
+python query.py --show magicui_shimmer-button
 ```
 
 ---
@@ -152,7 +196,9 @@ python query.py --search "button" --framework React
 Cada fonte implementa a interface `SourceAdapter` (`src/adapters/base.py`), com um único método `collect(config)` que devolve uma lista de `ComponentDTO`. O núcleo não conhece detalhes de seletor, JSON ou estrutura de pasta de cada site — tudo fica isolado no adapter da fonte.
 
 - **`registry.py`** — ponto único de descoberta das fontes suportadas
-- **`persistence.py`** — única fronteira com SQLite; upsert por `external_id`
+- **`schema.py`** — esquema relacional (sources, components, tags, files) + índices
+- **`persistence.py`** — única fronteira com o banco; upsert idempotente por `external_id`
+- **`categorize.py`** — deriva categoria primária e tags de faceta a partir do nome
 - **`git_clone.py`** — clona repositórios públicos uma vez em `.cache/repos/` e lê do disco
 
 ### Modos de coleta

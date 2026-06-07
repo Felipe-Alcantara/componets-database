@@ -23,6 +23,7 @@ coleta correta e respeitosa à licença > escala. Possível evolução: busca se
 - [2026-06-05] ✅ Float UI adicionado com coleta de metadados apenas (restrição de licença)
 - [2026-06-05] ✅ Repositório formatado no padrão Felixo (README, IA.md, start_app, testes)
 - [2026-06-06] ✅ Categorização canônica + tags multi-uso + flag is_demo
+- [2026-06-06] ✅ Banco normalizado relacional (sources/components/tags/files) + índices
 - [ ] ⬜ Camada de busca semântica por IA (planejado, não iniciado)
 
 ---
@@ -48,6 +49,9 @@ detalhes de cada site. Seguir o guia GUIA-SCRAPING-MULTIFORMATO do Felixo.
 [2026-06-05] Upsert idempotente por external_id: rodar duas vezes não duplica.
 [2026-06-05] Salva JSON por fonte (auditoria) sempre; banco só com --commit (dry-run por padrão).
 [2026-06-05] git_clone.py mantém cache em scraper/.cache/repos/ (ignorado pelo git).
+[2026-06-06] Banco relacional normalizado em schema.py: sources, components, tags,
+component_tags (N:N), component_files, component_dependencies, com FKs e índices.
+persistence.py recria relações filhas no update (idempotente). query.py usa JOINs.
 
 ---
 
@@ -126,7 +130,17 @@ category_tags (JSON) guarda todas as facetas para busca multi-uso. Facetas trans
 marcados com is_demo e escondidos por padrão na busca.
 VALIDAÇÃO: 392 componentes com 2+ tags; busca por 'animation' passou a trazer modal/
 tooltip/progress animados; 139 demos marcados; 26 testes passando. Regras em
-src/categorize.py; migração sem recoleta em migrate_categories.py.
+src/categorize.py (derivação aplicada na persistência e na migração relacional).
+
+[2026-06-06] CONTEXTO: banco era 1 tabela "larga" com listas em JSON (tags, files, deps)
+e sem índices — buscas faziam full table scan e não eram relacionais de verdade.
+ALTERNATIVAS: (a) só adicionar índices; (b) normalizar em tabelas com FK; (c) Postgres.
+DECISÃO: (a)+(b) em SQLite — esquema relacional (sources, components, tags, component_tags,
+component_files, component_dependencies) com FKs e índices. Postgres ficou para quando
+virar serviço/web.
+VALIDAÇÃO: migrate_relational.py converteu os 4714 sem perda (integrity ok, 0 fk_errors,
+52 tags, 5174 relações, 4484 arquivos). EXPLAIN QUERY PLAN confirma uso de índice
+(SEARCH USING INDEX) em vez de SCAN. 31 testes passando.
 
 ---
 
