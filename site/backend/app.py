@@ -36,6 +36,11 @@ def components():
     except ValueError:
         return jsonify({"error": "page e per_page devem ser inteiros"}), 400
 
+    try:
+        seed = int(request.args.get("seed", 1))
+    except ValueError:
+        seed = 1
+
     result = repo.search_components(
         q=request.args.get("q", "").strip(),
         source=request.args.get("source", "").strip(),
@@ -43,6 +48,8 @@ def components():
         category=request.args.get("category", "").strip(),
         tag=request.args.get("tag", "").strip(),
         include_demos=request.args.get("include_demos") == "1",
+        sort=request.args.get("sort", "smart").strip(),
+        seed=seed,
         page=page,
         per_page=per_page,
     )

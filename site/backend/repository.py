@@ -60,10 +60,16 @@ def search_components(
     category: str = "",
     tag: str = "",
     include_demos: bool = False,
+    sort: str = "smart",
+    seed: int = 1,
     page: int = 1,
     per_page: int = 24,
 ) -> dict:
-    """Busca paginada com filtros combináveis. Não retorna o código (lista leve)."""
+    """
+    Busca paginada com filtros combináveis. Não retorna o código (lista leve).
+    sort: 'smart' (renderizáveis primeiro) | 'random' (ordem embaralhada estável
+    pelo seed, para paginar sem repetir) | 'name'.
+    """
     where = []
     params: list = []
 
@@ -103,17 +109,25 @@ def search_components(
         total = conn.execute(f"SELECT COUNT(DISTINCT c.id) {base}", params).fetchone()[0]
 
         offset = (page - 1) * per_page
-        # Prioridade de exibição: componentes que renderizam de verdade primeiro.
-        # 0 = HTML/CSS (preview confiável); 1 = React com demo (renderiza às vezes);
-        # 2 = React sem demo (geralmente só código). Evita abrir o site na cara dos
-        # componentes "não renderizáveis".
-        order = (
-            "ORDER BY CASE "
+
+        # Prioridade de render: HTML/CSS (preview confiável) → React com demo →
+        # React cru. Evita abrir o site na cara de componentes não renderizáveis.
+        priority = (
+            "CASE "
             "  WHEN s.framework LIKE '%HTML%' OR s.framework LIKE '%CSS%' THEN 0 "
             "  WHEN EXISTS (SELECT 1 FROM components d WHERE d.source_id = c.source_id "
             "               AND d.name = c.name || '-demo') THEN 1 "
-            "  ELSE 2 END, s.slug, c.name"
+            "  ELSE 2 END"
         )
+        if sort == "random":
+            # Embaralhamento estável por seed (mesma página → mesma ordem ao paginar),
+            # mas ainda priorizando os renderizáveis. (c.id * seed) % primo gera a
+            # permutação pseudo-aleatória determinística.
+            order = f"ORDER BY {priority}, (c.id * {int(seed)}) % 100003"
+        elif sort == "name":
+            order = "ORDER BY c.title, c.name"
+        else:  # smart
+            order = f"ORDER BY {priority}, s.slug, c.name"
         rows = conn.execute(
             f"SELECT DISTINCT c.id, c.external_id, c.name, c.title, c.description, "
             f"c.canonical_category, c.is_demo, c.public_url, c.license, "
