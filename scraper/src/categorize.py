@@ -92,17 +92,64 @@ _RULES: list[tuple[str, str]] = [
 
 _COMPILED = [(re.compile(pat), cat) for pat, cat in _RULES]
 
+# Facetas transversais: qualidades que se somam à categoria primária em vez de
+# substituí-la. Um "shimmer-button" é primariamente um button, mas também tem a
+# faceta "animation" e "effect" — relevante para quem busca "botão animado".
+# Estas regras NÃO definem a categoria primária; só entram nas tags.
+_FACET_RULES: list[tuple[str, str]] = [
+    (r"animat|shimmer|pulsat|shiny|ripple|rainbow|spinning|orbiting|blur-fade|marquee|kinetic|morphing|typing|typewriter", "animation"),
+    (r"effect|glow|beam|spotlight|glare|shine|backlight|confetti|cool-mode|gradient|neon|aurora|sparkle|meteor|vortex", "effect"),
+    (r"3d|parallax|perspective|tilt", "3d"),
+    (r"\btext\b|word|letter|typography", "text"),
+    (r"hover|interactive", "interactive"),
+    (r"\bdark\b|theme-toggle|theme-toggler", "theme"),
+    (r"glass|blur|frosted", "glassmorphism"),
+    (r"neobrutalism|brutalist", "neobrutalism"),
+]
+_FACET_COMPILED = [(re.compile(pat), cat) for pat, cat in _FACET_RULES]
+
 
 def canonical_category(name: str, original_category: str = "") -> str:
     """
-    Deriva a categoria canônica a partir do nome do componente e da
+    Deriva a categoria PRIMÁRIA (uma só) a partir do nome do componente e da
     categoria original. Retorna 'other' quando nenhuma regra casa.
+    Usada para navegação e ordenação.
     """
     haystack = f"{name} {original_category}".lower()
     for regex, cat in _COMPILED:
         if regex.search(haystack):
             return cat
     return "other"
+
+
+def category_tags(name: str, original_category: str = "") -> list[str]:
+    """
+    Deriva TODAS as facetas aplicáveis (categoria primária + tipos secundários +
+    facetas transversais), para busca multi-uso. Um componente pode aparecer em
+    várias categorias conforme o caso de uso.
+
+    Ex: "shimmer-button" -> ["button", "animation", "effect"]
+        "pricing-card"    -> ["card", "pricing", "section"]
+    """
+    haystack = f"{name} {original_category}".lower()
+    tags: list[str] = []
+
+    # Categoria primária sempre entra primeiro
+    primary = canonical_category(name, original_category)
+    if primary != "other":
+        tags.append(primary)
+
+    # Outros tipos estruturais que também casam (ex: pricing-card -> card E pricing)
+    for regex, cat in _COMPILED:
+        if cat not in tags and cat != "other" and regex.search(haystack):
+            tags.append(cat)
+
+    # Facetas transversais (animation, effect, 3d, theme...)
+    for regex, facet in _FACET_COMPILED:
+        if facet not in tags and regex.search(haystack):
+            tags.append(facet)
+
+    return tags or ["other"]
 
 
 def is_demo(name: str) -> bool:

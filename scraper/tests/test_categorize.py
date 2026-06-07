@@ -5,7 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.categorize import canonical_category, is_demo, CANONICAL
+from src.categorize import canonical_category, category_tags, is_demo, CANONICAL
 
 
 class TestCanonicalCategory(unittest.TestCase):
@@ -45,6 +45,45 @@ class TestCanonicalCategory(unittest.TestCase):
         self.assertTrue(is_demo("index"))
         self.assertFalse(is_demo("magic-card"))
         self.assertFalse(is_demo("button"))
+
+
+class TestCategoryTags(unittest.TestCase):
+    def test_primaria_sempre_primeira(self):
+        tags = category_tags("shimmer-button", "")
+        self.assertEqual(tags[0], "button")
+
+    def test_componente_multi_uso_recebe_facetas(self):
+        # botão animado deve ter button + animation
+        tags = category_tags("shimmer-button", "")
+        self.assertIn("button", tags)
+        self.assertIn("animation", tags)
+
+    def test_theme_toggler_tem_toggle_animation_theme(self):
+        tags = category_tags("animated-theme-toggler", "")
+        self.assertIn("toggle", tags)
+        self.assertIn("animation", tags)
+        self.assertIn("theme", tags)
+
+    def test_pricing_card_tem_card_e_pricing(self):
+        tags = category_tags("pricing-cards-radio-group", "")
+        self.assertIn("card", tags)
+        self.assertIn("pricing", tags)
+
+    def test_componente_simples_tem_uma_tag(self):
+        tags = category_tags("button", "Buttons")
+        self.assertEqual(tags, ["button"])
+
+    def test_3d_card_recebe_faceta_3d(self):
+        tags = category_tags("3d-card", "")
+        self.assertIn("card", tags)
+        self.assertIn("3d", tags)
+
+    def test_sem_match_retorna_other(self):
+        self.assertEqual(category_tags("xyz-quux", ""), ["other"])
+
+    def test_tags_sem_duplicatas(self):
+        tags = category_tags("animated-animated-button", "")
+        self.assertEqual(len(tags), len(set(tags)))
 
 
 if __name__ == "__main__":
