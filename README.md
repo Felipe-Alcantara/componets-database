@@ -43,7 +43,7 @@ O coletor segue o padrão de **scraping multiformato** do Felixo System Design: 
 ### ✨ Destaques
 
 - 🔌 **10 fontes** integradas, cada uma com seu adapter isolado
-- 🧩 **4.700+ componentes** coletados em uma rodada completa
+- 🧩 **4.900+ componentes** coletados em uma rodada completa
 - 📦 **Persistência idempotente** — rodar de novo atualiza, não duplica
 - ⚖️ **Consciente de licença** — bloqueia redistribuição quando a fonte não permite
 - 🚀 **Um comando** para instalar e coletar tudo
@@ -79,6 +79,7 @@ componets-database/
 ├── 📁 felixo-standards/           # Padrões de qualidade (submódulo)
 ├── start_app.py                   # Setup + coleta com um comando
 ├── IA.md                          # Contexto operacional para IA
+├── CONTRIBUTING.md                # Guia de contribuição
 ├── README.md                      # Este arquivo
 └── LICENSE                        # MIT
 ```
@@ -90,12 +91,12 @@ componets-database/
 | Fonte | Componentes | Método de coleta | Licença |
 |-------|------------:|------------------|---------|
 | Uiverse.io | ~3800 | git clone | MIT |
+| HyperUI | ~294 | git clone (HTML) | MIT |
 | Magic UI | ~245 | registry JSON | MIT |
 | Float UI | ~198 | git clone (**só metadados**) | proprietária |
 | React Bits | ~133 | git clone | MIT + Commons Clause |
 | Aceternity UI | ~66 | registry JSON | custom |
-| HyperUI | ~65 | git clone (MDX) | MIT |
-| DaisyUI | ~58 | git clone (CSS) | MIT |
+| DaisyUI | ~58 | git clone (HTML + CSS) | MIT |
 | shadcn/ui | ~56 | git clone | MIT |
 | Origin UI | ~53 | git clone | MIT |
 | 21st.dev | ~38 | registry JSON | MIT |
@@ -195,8 +196,9 @@ python query.py --show magicui_shimmer-button
 
 ### Opção 3: Navegar pela biblioteca visual (site) 🖥️
 
-Depois de coletar, suba o site para explorar os componentes com busca, filtros, preview
-ao vivo e código — na pasta `site/`:
+Depois de coletar, suba o site para explorar os componentes numa galeria com mini-preview
+ao vivo em cada card, busca (inclusive no código), filtros, ordenação aleatória, fundo
+selecionável e código — na pasta `site/`:
 
 ```bash
 python start_app.py
@@ -265,13 +267,12 @@ Ideias que o projeto poderia expandir, para quem quiser contribuir:
 - **Busca semântica por IA** — encontrar componentes por descrição em linguagem natural
   (ex.: "um card estilo cyberpunk para dashboard") em vez de só por nome/categoria.
 - **Novas fontes** — adicionar adapters para outras bibliotecas de componentes da comunidade.
-- **Preview visual** — gerar ou coletar imagens de preview dos componentes.
 - **Exportação** — formatos para importar componentes direto em projetos.
 
 ## 🤝 Contribuições
 
-Contribuições são bem-vindas! Sinta-se à vontade para:
-- Adicionar um novo adapter de fonte (veja `src/adapters/base.py`)
+Contribuições são bem-vindas! Veja o [`CONTRIBUTING.md`](CONTRIBUTING.md). Em resumo:
+- Adicionar um novo adapter de fonte (veja `scraper/src/adapters/base.py`)
 - Reportar bugs ou problemas de coleta
 - Melhorar a documentação
 

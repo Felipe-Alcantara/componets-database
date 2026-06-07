@@ -6,18 +6,25 @@ Framer Motion + Vite**, seguindo o design system do Felixo System Design.
 
 ## ✨ O que o site faz
 
-- **Grid** de componentes com glow roxo e identidade Felixo (tema escuro, partículas)
-- **Busca** por nome, título e descrição (com debounce)
-- **Filtros** combináveis: categoria, fonte, framework e tags (facetas multi-uso)
+- **Grid de galeria** com **mini-preview ao vivo** em cada card (lazy-load): o
+  componente aparece renderizado, sem precisar abrir o modal — no padrão Uiverse/21st.
+- **Busca** por nome, título, descrição, tags **e o próprio código** do componente,
+  com debounce. Buscar "instagram", "discord", "loading" etc. encontra componentes
+  cujo markup menciona o termo, mesmo com nome genérico.
+- **Filtros** combináveis: categoria, fonte, framework e tags (facetas multi-uso).
+- **Ordenação**: aleatória por padrão (com botão de embaralhar), recomendada
+  (renderizáveis primeiro) ou por nome.
+- **Fundo do preview** selecionável: branco, cinza ou preto — para enxergar
+  componentes claros e escuros.
 - **Modal de detalhe** com:
   - **Preview ao vivo** em iframe isolado:
     - HTML/CSS (Uiverse, HyperUI, DaisyUI) — renderiza direto, com Tailwind/DaisyUI via CDN
     - React (shadcn, Magic UI, Aceternity, etc.) — compila no navegador com Babel,
       usando o código do `-demo` como instância de uso quando disponível; cai num
       aviso claro (+ aba Código) quando o componente depende de algo não resolvível
-  - **Código** com botão de copiar
+  - **Código** com seletor de arquivos e botão de copiar
   - **Metadados**: fonte, framework, licença, dependências, link de origem
-- **Paginação** sobre os milhares de componentes
+- **Paginação** sobre os milhares de componentes.
 
 ## 📁 Estrutura
 
@@ -30,15 +37,18 @@ site/
 │   └── requirements.txt
 └── frontend/
     ├── src/
-    │   ├── App.jsx          # Página principal (busca, filtros, grid, paginação)
+    │   ├── App.jsx          # Página principal (busca, filtros, ordenação, fundo, grid)
     │   ├── api.js           # Cliente da API
     │   ├── components/
     │   │   ├── ui/          # Button, Card, Badge, Input (design system Felixo)
     │   │   ├── BackgroundParticles.jsx
     │   │   ├── FilterSidebar.jsx
-    │   │   ├── ComponentCard.jsx
+    │   │   ├── ComponentCard.jsx   # Card de galeria com mini-preview
+    │   │   ├── LivePreview.jsx      # iframe de preview lazy-load (card e modal)
     │   │   └── ComponentModal.jsx
-    │   └── utils/cx.js
+    │   └── utils/
+    │       ├── cx.js
+    │       └── preview.js   # Monta o doc do iframe (HTML direto / React via Babel)
     ├── index.css            # Estilos de glow Felixo
     └── (configs Vite/Tailwind/PostCSS)
 ```
@@ -73,8 +83,9 @@ python start_app.py
 |------|-----------|
 | `GET /api/health` | Status e se o banco existe |
 | `GET /api/filters` | Opções de filtro (fontes, frameworks, categorias, tags) |
-| `GET /api/components` | Busca paginada — params: `q`, `source`, `framework`, `category`, `tag`, `include_demos`, `page`, `per_page` |
-| `GET /api/components/<external_id>` | Detalhe completo (código, dependências, tags) |
+| `GET /api/components` | Busca paginada. Params: `q` (busca em nome/título/descrição/tags/código), `source`, `framework`, `category`, `tag`, `include_demos`, `sort` (`random`/`smart`/`name`), `seed`, `page`, `per_page` |
+| `GET /api/components/<external_id>` | Detalhe completo (código, dependências, tags, demo) |
+| `GET /api/components/<external_id>/preview` | Dados mínimos para o mini-preview do card (código + demo), sem o peso do detalhe |
 
 ## 🏛️ Arquitetura
 
@@ -88,4 +99,11 @@ O preview ao vivo roda em `<iframe sandbox>` isolado, sem executar código no co
 página. Para HTML, injeta o markup com Tailwind (e DaisyUI quando for o caso) via CDN.
 Para React, compila o código com Babel standalone dentro do iframe e renderiza a instância
 de uso vinda do `-demo`; hooks do React e utilitários comuns (`cn`, `motion`, primitivos
-de UI) são fornecidos por stubs. A lógica do preview fica em `src/utils/preview.js`.
+de UI) são fornecidos por stubs. Um script de auto-ajuste mede o conteúdo e reduz a escala
+para o componente caber sem vazar do card. A cor de fundo (branco/cinza/preto) é um
+parâmetro do builder. A lógica do preview fica em `src/utils/preview.js`.
+
+**Ordenação e relevância:** o backend ordena priorizando o que renderiza (HTML →
+React com demo → React cru), para a primeira tela não cair nos "só código". O modo
+aleatório embaralha de forma determinística por um `seed` (pagina sem repetir). Na busca,
+match em nome/título tem prioridade sobre match só no código.

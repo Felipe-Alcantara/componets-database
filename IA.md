@@ -29,6 +29,11 @@ coleta correta e respeitosa à licença > escala. Possível evolução: busca se
 - [2026-06-07] ✅ Preview ao vivo: HTML direto (Uiverse/HyperUI/DaisyUI) + React compilado
   com Babel no iframe usando o -demo como instância. HyperUI recoletado (HTML real de
   public/examples), DaisyUI com exemplo de uso. Banco passou a ~4943 componentes.
+- [2026-06-07] ✅ Layout de galeria: mini-preview ao vivo em cada card (lazy-load), grid
+  denso, fundo claro com auto-escala. Nomes do Uiverse legíveis (categoria + número),
+  URLs "ver na fonte" corrigidas (Uiverse→GitHub, 21st→página).
+- [2026-06-07] ✅ Ordenação aleatória por padrão (seed estável) + seletor; seletor de fundo
+  do preview (branco/cinza/preto); busca passa a varrer o código do componente.
 - [ ] ⬜ Busca semântica por IA — melhoria aberta à comunidade (ver README, "Próximos passos")
 
 ---
@@ -152,6 +157,23 @@ virar serviço/web.
 VALIDAÇÃO: migrate_relational.py converteu os 4714 sem perda (integrity ok, 0 fk_errors,
 52 tags, 5174 relações, 4484 arquivos). EXPLAIN QUERY PLAN confirma uso de índice
 (SEARCH USING INDEX) em vez de SCAN. 31 testes passando.
+
+[2026-06-07] CONTEXTO: preview de componentes React no navegador (shadcn/Magic UI etc.)
+sem resolver toda a árvore de imports.
+ALTERNATIVAS: (a) só código; (b) Babel no iframe auto-renderizando o export; (c) Babel +
+usar o -demo como instância de uso.
+DECISÃO: (c). O componente é exportado sem instância; o -demo o instancia. Concatena
+componente + demo, compila com Babel (filename .tsx p/ remover tipos), stubs para cn/
+motion/hooks/ícones lucide/primitivos shadcn. Fallback claro + aba Código quando falha.
+VALIDAÇÃO: Magic Card e ~70% dos demos do Magic UI renderizam; HTML (Uiverse/HyperUI/
+DaisyUI) renderiza direto. Validado por screenshots no navegador.
+
+[2026-06-07] CONTEXTO: busca por "instagram" retornava 0, embora 83 componentes tenham
+o termo no código (ícones sociais, links) — nomes genéricos (Uiverse "Button 882").
+ALTERNATIVAS: (a) FTS5; (b) extrair keywords p/ um campo; (c) LIKE direto no conteúdo.
+DECISÃO: (c). Conteúdo total ~14 MB, LIKE resolve em ~70ms — não justifica FTS/keywords.
+A busca casa em nome/título/descrição/tags/código; relevância prioriza nome/título.
+VALIDAÇÃO: instagram 0→83, discord →45, loading →237. Contagem confere via API e UI.
 
 ---
 
