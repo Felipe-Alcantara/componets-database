@@ -261,11 +261,13 @@ Este projeto segue o **[Felixo System Design](https://github.com/Felipe-Alcantar
 A pasta `felixo-standards/` (ignorada pelo git) é sincronizada localmente. Para puxar a
 versão mais recente, use o método mais adequado:
 
+> **Sobre submódulos:** o Felixo System Design inclui o submódulo `componets-database/` — que é **este próprio projeto**. Para os padrões `core/` e `guias/` (o que interessa aqui), **clone sem `--recurse-submodules`**: assim você evita baixar uma cópia recursiva deste repositório dentro de `felixo-standards/`. Os comandos abaixo já são a variante leve, sem submódulo.
+
 ### 1. Sincronizar sem `.git` (recomendado)
 
 **Linux / macOS / Git Bash:**
 ```bash
-tmp_dir="$(mktemp -d)" && git clone --depth 1 https://github.com/Felipe-Alcantara/Felixo-System-Design.git "$tmp_dir/repo" && rm -rf "$tmp_dir/repo/.git" && mkdir -p ./felixo-standards && rsync -a --delete "$tmp_dir/repo/" ./felixo-standards/ && rm -rf "$tmp_dir"
+tmp_dir="$(mktemp -d)" && git clone --depth 1 https://github.com/Felipe-Alcantara/Felixo-System-Design.git "$tmp_dir/repo" && find "$tmp_dir/repo" -name .git -prune -exec rm -rf {} + && mkdir -p ./felixo-standards && rsync -a --delete "$tmp_dir/repo/" ./felixo-standards/ && rm -rf "$tmp_dir"
 ```
 
 **PowerShell (Windows):**
@@ -280,14 +282,20 @@ Remove-Item -Recurse -Force $tmpDir
 
 #### Atalho global `felixo` (Bash/Zsh)
 
+A função traz apenas `core/` e `guias/` por padrão. A flag `-s` / `--with-submodules`
+existe por paridade com o repositório original, mas **aqui não é recomendada** (baixaria
+uma cópia recursiva deste projeto).
+
 ```bash
 felixo() {
   local dest="./felixo-standards"
   local repo_url="https://github.com/Felipe-Alcantara/Felixo-System-Design.git"
+  local clone_args=(--depth 1)
+  [[ "$1" == "--with-submodules" || "$1" == "-s" ]] && clone_args+=(--recurse-submodules)
   local tmp_dir
   tmp_dir="$(mktemp -d)" || return 1
-  git clone --depth 1 "$repo_url" "$tmp_dir/repo" || { rm -rf "$tmp_dir"; return 1; }
-  rm -rf "$tmp_dir/repo/.git"
+  git clone "${clone_args[@]}" "$repo_url" "$tmp_dir/repo" || { rm -rf "$tmp_dir"; return 1; }
+  find "$tmp_dir/repo" -name .git -prune -exec rm -rf {} +
   mkdir -p "$dest"
   rsync -a --delete "$tmp_dir/repo/" "$dest/"
   rm -rf "$tmp_dir"
